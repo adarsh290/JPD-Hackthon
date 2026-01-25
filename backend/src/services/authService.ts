@@ -92,9 +92,11 @@ export class AuthService {
   }
 
   private generateToken(userId: string): string {
-    return jwt.sign({ userId }, config.jwt.secret, {
-      expiresIn: config.jwt.expiresIn,
-    });
+    return jwt.sign(
+      { userId }, 
+      config.jwt.secret, 
+      { expiresIn: config.jwt.expiresIn } as jwt.SignOptions
+    );
   }
 }
 

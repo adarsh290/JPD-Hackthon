@@ -1,173 +1,101 @@
 import prisma from '../config/database.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { Link, Rule } from '@prisma/client';
 
 export interface CreateLinkData {
-  hubId: string;
+  hubId: number;
   title: string;
   url: string;
-  icon?: string;
-  position?: number;
   isActive?: boolean;
-}
-
-export interface UpdateLinkData {
-  title?: string;
-  url?: string;
-  icon?: string;
-  position?: number;
-  isActive?: boolean;
+  priorityScore?: number;
 }
 
 export interface CreateRuleData {
-  timeRules?: any;
-  deviceRules?: any;
-  geoRules?: any;
-  performanceRules?: any;
+  type: string;
+  value: Record<string, unknown>;
 }
 
 export class LinkService {
-  async createLink(userId: string, data: CreateLinkData): Promise<Link> {
-    // Verify hub ownership
-    const hub = await prisma.linkHub.findFirst({
-      where: {
-        id: data.hubId,
-        userId,
-      },
-    });
-
-    if (!hub) {
-      throw new AppError(404, 'Hub not found or access denied');
-    }
-
-    // Get max position if not provided
-    let position = data.position;
-    if (position === undefined) {
-      const maxPosition = await prisma.link.findFirst({
-        where: { hubId: data.hubId },
-        orderBy: { position: 'desc' },
-        select: { position: true },
-      });
-      position = (maxPosition?.position ?? -1) + 1;
-    }
-
-    return prisma.link.create({
-      data: {
-        ...data,
-        position,
-      },
-    });
-  }
-
-  async updateLink(
-    userId: string,
-    linkId: string,
-    data: UpdateLinkData
-  ): Promise<Link> {
-    // Verify ownership
-    const link = await this.verifyOwnership(userId, linkId);
-
-    return prisma.link.update({
-      where: { id: linkId },
-      data,
-    });
-  }
-
-  async deleteLink(userId: string, linkId: string): Promise<void> {
-    // Verify ownership
-    await this.verifyOwnership(userId, linkId);
-
-    await prisma.link.delete({
-      where: { id: linkId },
-    });
-  }
-
-  async reorderLinks(
-    userId: string,
-    hubId: string,
-    linkPositions: { id: string; position: number }[]
-  ): Promise<void> {
-    // Verify hub ownership
-    const hub = await prisma.linkHub.findFirst({
-      where: {
-        id: hubId,
-        userId,
-      },
-    });
-
-    if (!hub) {
-      throw new AppError(404, 'Hub not found or access denied');
-    }
-
-    // Update positions in transaction
-    await prisma.$transaction(
-      linkPositions.map(({ id, position }) =>
-        prisma.link.update({
-          where: { id },
-          data: { position },
-        })
-      )
-    );
-  }
-
-  async getLinks(userId: string, hubId: string): Promise<Link[]> {
-    // Verify hub ownership
-    const hub = await prisma.linkHub.findFirst({
-      where: {
-        id: hubId,
-        userId,
-      },
-    });
-
-    if (!hub) {
-      throw new AppError(404, 'Hub not found or access denied');
-    }
-
-    return prisma.link.findMany({
-      where: { hubId },
-      include: { rules: true },
-      orderBy: { position: 'asc' },
-    });
-  }
-
-  async updateRule(
-    userId: string,
-    linkId: string,
-    ruleData: CreateRuleData
-  ): Promise<Rule> {
-    // Verify ownership
-    await this.verifyOwnership(userId, linkId);
-
-    // Upsert rule
-    return prisma.rule.upsert({
-      where: { linkId },
-      create: {
-        linkId,
-        ...ruleData,
-      },
-      update: ruleData,
-    });
-  }
-
-  private async verifyOwnership(userId: string, linkId: string): Promise<Link> {
+  async verifyOwnership(userId: string, linkId: number): Promise<void> {
     const link = await prisma.link.findUnique({
       where: { id: linkId },
-      include: {
-        hub: {
-          select: { userId: true },
-        },
-      },
+      include: { hub: { select: { userId: true } } },
     });
 
-    if (!link) {
-      throw new AppError(404, 'Link not found');
+    if (!link || link.hub.userId !== userId) {
+      throw new AppError(404, 'Link not found or access denied');
+    }
+  }
+
+  async createLink(userId: string, data: CreateLinkData) {
+    // Verify hub ownership
+    const hub = await prisma.hub.findFirst({
+      where: { id: data.hubId, userId },
+    });
+
+    if (!hub) {
+      throw new AppError(404, 'Hub not found or access denied');
     }
 
-    if (link.hub.userId !== userId) {
-      throw new AppError(403, 'Access denied');
-    }
+    return await prisma.link.create({
+      data: {
+        hubId: data.hubId,
+        title: data.title,
+        url: data.url,
+        isActive: data.isActive ?? true,
+        priorityScore: data.priorityScore ?? 0,
+      },
+      include: {
+        rules: true,
+        _count: { select: { analytics: true } },
+      },
+    });
+  }
 
-    return link;
+  async updateLink(userId: string, linkId: number, data: Partial<CreateLinkData>) {
+    await this.verifyOwnership(userId, linkId);
+
+    return await prisma.link.update({
+      where: { id: linkId },
+      data,
+      include: {
+        rules: true,
+        _count: { select: { analytics: true } },
+      },
+    });
+  }
+
+  async deleteLink(userId: string, linkId: number): Promise<void> {
+    await this.verifyOwnership(userId, linkId);
+    await prisma.link.delete({ where: { id: linkId } });
+  }
+
+  async createRule(userId: string, linkId: number, ruleData: CreateRuleData) {
+    await this.verifyOwnership(userId, linkId);
+
+    return await prisma.rule.create({
+      data: {
+        linkId,
+        type: ruleData.type,
+        value: ruleData.value as object,
+      },
+    });
+  }
+
+  async updateRule(userId: string, linkId: number, ruleId: number, ruleData: CreateRuleData) {
+    await this.verifyOwnership(userId, linkId);
+
+    return await prisma.rule.update({
+      where: { id: ruleId },
+      data: {
+        type: ruleData.type,
+        value: ruleData.value as object,
+      },
+    });
+  }
+
+  async deleteRule(userId: string, linkId: number, ruleId: number): Promise<void> {
+    await this.verifyOwnership(userId, linkId);
+    await prisma.rule.delete({ where: { id: ruleId } });
   }
 }
 

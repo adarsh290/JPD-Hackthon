@@ -4,7 +4,7 @@ import { detectContext } from '../utils/contextDetector.js';
 
 export class ResolverController {
   async resolve(req: Request, res: Response) {
-    const { slug } = req.params;
+    const slug = req.params.slug as string;
     const context = await detectContext(req);
     const result = await resolverService.resolve(slug, context);
     

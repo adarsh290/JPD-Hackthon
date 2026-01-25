@@ -10,6 +10,8 @@ import resolverRoutes from './routes/resolverRoutes.js';
 import linkRoutes from './routes/linkRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import hubRoutes from './routes/hubRoutes.js';
+import qrRoutes from './routes/qrRoutes.js';
+import shortUrlRoutes from './routes/shortUrlRoutes.js';
 
 const app = express();
 
@@ -29,7 +31,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -42,9 +44,13 @@ app.use('/api/resolve', resolverRoutes);
 app.use('/api/links', linkRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/hubs', hubRoutes);
+app.use('/api', qrRoutes);
+
+// Short URL routes (no /api prefix)
+app.use('/s', shortUrlRoutes);
 
 // 404 handler
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({
     success: false,
     error: {

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { HubCard } from './HubCard';
 import { CreateHubDialog } from './CreateHubDialog';
 import { HubEditor } from './HubEditor';
+import { ThemeToggle } from './ThemeToggle';
 import { Plus, LogOut, Link2, BarChart3, Zap } from 'lucide-react';
 import type { Hub } from '@/hooks/useHubs';
 
@@ -37,10 +38,13 @@ export function Dashboard() {
               Logged in as: <span className="text-primary">{user?.email}</span>
             </p>
           </div>
-          <Button variant="outline" onClick={() => signOut()}>
-            <LogOut className="w-4 h-4 mr-2" />
-            LOGOUT
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="outline" onClick={() => signOut()}>
+              <LogOut className="w-4 h-4 mr-2" />
+              LOGOUT
+            </Button>
+          </div>
         </motion.div>
 
         {/* Stats */}

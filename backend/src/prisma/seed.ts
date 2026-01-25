@@ -8,6 +8,7 @@ async function main() {
 
   // Create a test user
   const passwordHash = await bcrypt.hash('password123', 12);
+  
   const user = await prisma.user.upsert({
     where: { email: 'test@example.com' },
     update: {},
@@ -18,74 +19,103 @@ async function main() {
     },
   });
 
-  console.log('✅ Created test user:', user.email);
+  console.log('✅ Created user:', user.email);
 
   // Create a test hub
-  const hub = await prisma.linkHub.upsert({
-    where: { slug: 'demo-hub' },
+  const hub = await prisma.hub.upsert({
+    where: { slug: 'test-hub' },
     update: {},
     create: {
       userId: user.id,
-      name: 'Demo Hub',
-      slug: 'demo-hub',
-      description: 'A demo link hub',
-      isActive: true,
+      slug: 'test-hub',
+      title: 'Test Hub',
     },
   });
 
-  console.log('✅ Created demo hub:', hub.slug);
+  console.log('✅ Created hub:', hub.title);
 
   // Create test links
-  const links = await Promise.all([
-    prisma.link.upsert({
-      where: { id: 'link-1' },
-      update: {},
-      create: {
-        id: 'link-1',
-        hubId: hub.id,
-        title: 'Example Link 1',
-        url: 'https://example.com',
-        icon: '🔗',
-        position: 0,
-        isActive: true,
-      },
-    }),
-    prisma.link.upsert({
-      where: { id: 'link-2' },
-      update: {},
-      create: {
-        id: 'link-2',
-        hubId: hub.id,
-        title: 'Example Link 2',
-        url: 'https://example.org',
-        icon: '⭐',
-        position: 1,
-        isActive: true,
-      },
-    }),
-  ]);
-
-  console.log('✅ Created', links.length, 'test links');
-
-  // Create a rule for the first link
-  await prisma.rule.upsert({
-    where: { linkId: links[0].id },
+  const link1 = await prisma.link.upsert({
+    where: { id: 1 },
     update: {},
     create: {
-      linkId: links[0].id,
-      deviceRules: {
+      hubId: hub.id,
+      title: 'Google',
+      url: 'https://google.com',
+      isActive: true,
+      priorityScore: 100,
+    },
+  });
+
+  const link2 = await prisma.link.upsert({
+    where: { id: 2 },
+    update: {},
+    create: {
+      hubId: hub.id,
+      title: 'GitHub',
+      url: 'https://github.com',
+      isActive: true,
+      priorityScore: 90,
+    },
+  });
+
+  console.log('✅ Created links:', link1.title, link2.title);
+
+  // Create test rules
+  await prisma.rule.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      linkId: link1.id,
+      type: 'device',
+      value: {
         allowed: ['mobile', 'desktop'],
         priority: 'mobile',
       },
-      performanceRules: {
-        autoSort: true,
-        priority: 'high',
+    },
+  });
+
+  await prisma.rule.upsert({
+    where: { id: 2 },
+    update: {},
+    create: {
+      linkId: link2.id,
+      type: 'time',
+      value: {
+        start: '09:00',
+        end: '17:00',
+        days: [1, 2, 3, 4, 5], // Monday to Friday
       },
     },
   });
 
-  console.log('✅ Created rule for first link');
+  console.log('✅ Created rules');
 
+  // Create some test analytics
+  await prisma.analytics.createMany({
+    data: [
+      {
+        hubId: hub.id,
+        linkId: null, // Hub visit
+        device: 'desktop',
+        country: 'US',
+      },
+      {
+        hubId: hub.id,
+        linkId: link1.id, // Link click
+        device: 'mobile',
+        country: 'CA',
+      },
+      {
+        hubId: hub.id,
+        linkId: link2.id, // Link click
+        device: 'desktop',
+        country: 'UK',
+      },
+    ],
+  });
+
+  console.log('✅ Created analytics data');
   console.log('🎉 Seeding completed!');
 }
 

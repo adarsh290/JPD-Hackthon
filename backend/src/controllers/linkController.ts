@@ -46,7 +46,7 @@ export class LinkController {
       throw new AppError(404, 'Hub not found or access denied');
     }
 
-    const link = await prisma.$transaction(async (tx) => {
+    const link = await prisma.$transaction(async (tx: any) => {
       const created = await tx.link.create({
         data: {
           hubId,

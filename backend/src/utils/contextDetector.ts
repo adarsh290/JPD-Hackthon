@@ -10,34 +10,48 @@ export interface RequestContext {
 }
 
 /**
- * Detect country from IP address
- * For production, integrate with a GeoIP service like:
- * - MaxMind GeoIP2 (https://www.maxmind.com/)
- * - ipapi.co (https://ipapi.co/)
- * - ip-api.com (https://ip-api.com/)
- * 
- * Example implementation with ipapi.co:
- * const response = await fetch(`https://ipapi.co/${ipAddress}/country_code/`);
- * return await response.text();
+ * Detect country from IP address using ipapi.co service
+ * Handles localhost IPs and API failures gracefully
  */
 async function detectCountry(ipAddress: string | undefined): Promise<string | undefined> {
-  if (!ipAddress || ipAddress === '::1' || ipAddress.startsWith('127.')) {
-    return undefined; // Localhost
+  if (!ipAddress || ipAddress === '::1' || ipAddress.startsWith('127.') || ipAddress.startsWith('192.168.') || ipAddress.startsWith('10.')) {
+    return undefined; // Localhost or private network
   }
 
-  // TODO: Integrate with GeoIP service in production
-  // For now, return undefined - you can add a service here
-  // Example:
-  // try {
-  //   const response = await fetch(`https://ipapi.co/${ipAddress}/country_code/`);
-  //   if (response.ok) {
-  //     return await response.text();
-  //   }
-  // } catch (error) {
-  //   console.error('GeoIP detection failed:', error);
-  // }
-  
-  return undefined;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
+    const response = await fetch(`https://ipapi.co/${ipAddress}/json/`, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Smart-Link-Hub/1.0',
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.warn(`GeoIP API returned ${response.status} for IP ${ipAddress}`);
+      return 'unknown';
+    }
+
+    const data = await response.json() as { country_code?: string; error?: boolean };
+    
+    if (data.error || !data.country_code) {
+      console.warn(`GeoIP API error for IP ${ipAddress}:`, data);
+      return 'unknown';
+    }
+
+    return data.country_code.toUpperCase();
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.warn(`GeoIP API timeout for IP ${ipAddress}`);
+    } else {
+      console.warn(`GeoIP detection failed for IP ${ipAddress}:`, error);
+    }
+    return 'unknown';
+  }
 }
 
 export async function detectContext(req: Request): Promise<RequestContext> {

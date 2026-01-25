@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useHubs, useHubLinks, type Hub, type Link } from '@/hooks/useHubs';
 import { useHubAnalytics } from '@/hooks/useAnalytics';
+import { useQRCode } from '@/hooks/useQRCode';
+import { useAnalyticsExport } from '@/hooks/useAnalyticsExport';
 import { LinkEditor } from './LinkEditor';
 import { LinkList } from './LinkList';
 import { toast } from 'sonner';
@@ -22,6 +23,8 @@ import {
   Trash2,
   Eye,
   MousePointerClick,
+  Download,
+  FileDown,
 } from 'lucide-react';
 
 interface HubEditorProps {
@@ -33,6 +36,8 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
   const { updateHub, deleteHub } = useHubs();
   const { links, createLink, updateLink, deleteLink, reorderLinks } = useHubLinks(hub.id);
   const { clicks, visits } = useHubAnalytics(hub.id);
+  const { qrData, loading: qrLoading, generateQR, downloadQR } = useQRCode(hub.id);
+  const { exportCSV, loading: exportLoading } = useAnalyticsExport();
   const [editingLink, setEditingLink] = useState<Link | null>(null);
   const [showNewLink, setShowNewLink] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -166,25 +171,39 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setShowQR(!showQR)}
+                      onClick={() => {
+                        if (!showQR) {
+                          generateQR();
+                        }
+                        setShowQR(!showQR);
+                      }}
                       className={showQR ? 'bg-primary/10' : ''}
+                      disabled={qrLoading}
                     >
                       <QrCode className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
-                {showQR && (
+                {showQR && qrData && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-4 bg-white rounded-lg"
+                    className="flex flex-col items-center gap-3 p-4 bg-white rounded-lg"
                   >
-                    <QRCodeSVG
-                      value={publicUrl}
-                      size={120}
-                      fgColor="#00FF00"
-                      bgColor="#FFFFFF"
+                    <img
+                      src={qrData.qrCode}
+                      alt={`QR Code for ${qrData.hubTitle}`}
+                      className="w-32 h-32"
                     />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={downloadQR}
+                      className="text-xs"
+                    >
+                      <Download className="w-3 h-3 mr-1" />
+                      Download QR
+                    </Button>
                   </motion.div>
                 )}
               </div>
@@ -221,8 +240,18 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
 
           <TabsContent value="analytics">
             <Card variant="terminal">
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg font-display">PERFORMANCE_DATA</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportCSV(hub.id)}
+                  disabled={exportLoading}
+                  className="border-green-500 hover:bg-green-500/10"
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  {exportLoading ? 'Exporting...' : 'Export CSV'}
+                </Button>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>

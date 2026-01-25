@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AppError } from '../middleware/errorHandler.js';
 
 export const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -73,16 +74,14 @@ export const ruleSchema = z.object({
 });
 
 export function validate(schema: z.ZodSchema) {
-  return (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => {
+  return (req: import('express').Request, _res: import('express').Response, next: import('express').NextFunction) => {
     try {
       schema.parse(req.body);
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          error: { message: 'Validation error', details: error.errors },
-        });
+        const message = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+        return next(new AppError(400, `Validation error: ${message}`));
       }
       next(error);
     }

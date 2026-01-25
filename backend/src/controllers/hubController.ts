@@ -5,10 +5,10 @@ import { AppError } from '../middleware/errorHandler.js';
 
 export class HubController {
   async createHub(req: AuthRequest, res: Response) {
-    const { name, description } = req.body;
+    const { title } = req.body;
     
     // Generate unique slug
-    const baseSlug = name
+    const baseSlug = title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
@@ -17,17 +17,16 @@ export class HubController {
     let counter = 1;
     
     // Ensure slug is unique
-    while (await prisma.linkHub.findUnique({ where: { slug } })) {
+    while (await prisma.hub.findUnique({ where: { slug } })) {
       slug = `${baseSlug}-${Math.random().toString(36).substring(2, 8)}`;
       counter++;
     }
 
-    const hub = await prisma.linkHub.create({
+    const hub = await prisma.hub.create({
       data: {
         userId: req.user!.id,
-        name,
+        title: title,
         slug,
-        description,
       },
     });
 
@@ -38,7 +37,7 @@ export class HubController {
   }
 
   async getHubs(req: AuthRequest, res: Response) {
-    const hubs = await prisma.linkHub.findMany({
+    const hubs = await prisma.hub.findMany({
       where: { userId: req.user!.id },
       orderBy: { createdAt: 'desc' },
     });
@@ -50,8 +49,12 @@ export class HubController {
   }
 
   async getHub(req: AuthRequest, res: Response) {
-    const { id } = req.params;
-    const hub = await prisma.linkHub.findFirst({
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+      throw new AppError(400, 'Invalid hub ID');
+    }
+    
+    const hub = await prisma.hub.findFirst({
       where: {
         id,
         userId: req.user!.id,
@@ -69,9 +72,12 @@ export class HubController {
   }
 
   async updateHub(req: AuthRequest, res: Response) {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+      throw new AppError(400, 'Invalid hub ID');
+    }
     
-    const hub = await prisma.linkHub.findFirst({
+    const hub = await prisma.hub.findFirst({
       where: {
         id,
         userId: req.user!.id,
@@ -82,7 +88,7 @@ export class HubController {
       throw new AppError(404, 'Hub not found');
     }
 
-    const updated = await prisma.linkHub.update({
+    const updated = await prisma.hub.update({
       where: { id },
       data: req.body,
     });
@@ -94,9 +100,12 @@ export class HubController {
   }
 
   async deleteHub(req: AuthRequest, res: Response) {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+      throw new AppError(400, 'Invalid hub ID');
+    }
     
-    const hub = await prisma.linkHub.findFirst({
+    const hub = await prisma.hub.findFirst({
       where: {
         id,
         userId: req.user!.id,
@@ -107,7 +116,7 @@ export class HubController {
       throw new AppError(404, 'Hub not found');
     }
 
-    await prisma.linkHub.delete({
+    await prisma.hub.delete({
       where: { id },
     });
 

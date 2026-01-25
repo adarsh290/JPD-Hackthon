@@ -13,6 +13,14 @@ router.get(
   analyticsController.getAnalytics.bind(analyticsController)
 );
 
+// Export analytics as CSV (requires auth)
+router.get(
+  '/export/:hubId',
+  authenticate,
+  apiLimiter,
+  analyticsController.exportAnalytics.bind(analyticsController)
+);
+
 // Track click (public endpoint, but rate limited)
 router.post(
   '/click/:hubId/:linkId',

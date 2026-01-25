@@ -6,7 +6,7 @@ import { Request } from 'express';
 
 export class AnalyticsController {
   async getAnalytics(req: AuthRequest, res: Response) {
-    const { hubId } = req.params;
+    const hubId = req.params.hubId as string;
     const analytics = await analyticsService.getHubAnalytics(req.user!.id, hubId);
     res.json({
       success: true,
@@ -14,8 +14,25 @@ export class AnalyticsController {
     });
   }
 
+  async exportAnalytics(req: AuthRequest, res: Response) {
+    const hubId = req.params.hubId as string;
+    
+    try {
+      const csvData = await analyticsService.exportAnalytics(req.user!.id, hubId);
+      
+      // Set headers for file download
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="hub-${hubId}-analytics.csv"`);
+      
+      res.send(csvData);
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async trackClick(req: Request, res: Response) {
-    const { linkId, hubId } = req.params;
+    const linkId = req.params.linkId as string;
+    const hubId = req.params.hubId as string;
     const context = await detectContext(req);
     
     await analyticsService.trackClick(linkId, hubId, {
