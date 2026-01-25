@@ -1,0 +1,162 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Pure Black & Neon Green Theme */
+    --background: 0 0% 0%;
+    --foreground: 120 100% 50%;
+
+    --card: 0 0% 3%;
+    --card-foreground: 120 100% 50%;
+
+    --popover: 0 0% 2%;
+    --popover-foreground: 120 100% 50%;
+
+    --primary: 120 100% 50%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 8%;
+    --secondary-foreground: 120 100% 50%;
+
+    --muted: 0 0% 12%;
+    --muted-foreground: 120 50% 40%;
+
+    --accent: 120 100% 25%;
+    --accent-foreground: 120 100% 50%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 120 100% 20%;
+    --input: 120 100% 15%;
+    --ring: 120 100% 50%;
+
+    --radius: 0.5rem;
+
+    /* Custom tokens */
+    --glow: 0 0 20px hsl(120, 100%, 50%, 0.5);
+    --glow-intense: 0 0 40px hsl(120, 100%, 50%, 0.8);
+    --gradient-matrix: linear-gradient(180deg, hsl(120, 100%, 50%, 0.1) 0%, transparent 100%);
+    --gradient-card: linear-gradient(135deg, hsl(0, 0%, 5%) 0%, hsl(0, 0%, 2%) 100%);
+    --gradient-button: linear-gradient(135deg, hsl(120, 100%, 50%) 0%, hsl(120, 100%, 35%) 100%);
+
+    --sidebar-background: 0 0% 2%;
+    --sidebar-foreground: 120 100% 50%;
+    --sidebar-primary: 120 100% 50%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 120 100% 15%;
+    --sidebar-accent-foreground: 120 100% 50%;
+    --sidebar-border: 120 100% 15%;
+    --sidebar-ring: 120 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-mono;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glow {
+    box-shadow: var(--glow);
+  }
+
+  .glow-intense {
+    box-shadow: var(--glow-intense);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 10px hsl(120, 100%, 50%, 0.8);
+  }
+
+  .gradient-matrix {
+    background: var(--gradient-matrix);
+  }
+
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  .gradient-button {
+    background: var(--gradient-button);
+  }
+
+  .scanlines {
+    position: relative;
+  }
+
+  .scanlines::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      hsl(120, 100%, 50%, 0.02) 2px,
+      hsl(120, 100%, 50%, 0.02) 4px
+    );
+    pointer-events: none;
+  }
+
+  .terminal-cursor {
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  .border-glow {
+    border: 1px solid hsl(120, 100%, 50%, 0.3);
+    box-shadow: inset 0 0 20px hsl(120, 100%, 50%, 0.05), var(--glow);
+  }
+
+  .hover-glow {
+    transition: all 0.3s ease;
+  }
+
+  .hover-glow:hover {
+    box-shadow: var(--glow-intense);
+    border-color: hsl(120, 100%, 50%, 0.6);
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(0, 0%, 5%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(120, 100%, 30%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(120, 100%, 50%);
+}
+
+/* Selection */
+::selection {
+  background: hsl(120, 100%, 50%, 0.3);
+  color: hsl(120, 100%, 50%);
+}

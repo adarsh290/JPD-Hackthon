@@ -1,0 +1,90 @@
+// Smart Link Hub – Prisma schema
+// Hub, Link, Rule, Analytics with Int IDs for type-safe request params
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  displayName  String?  @map("display_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  hubs Hub[]
+
+  @@map("users")
+}
+
+model Hub {
+  id        Int      @id @default(autoincrement())
+  userId   String   @map("user_id")
+  slug     String   @unique
+  title    String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links     Link[]
+  analytics Analytics[]
+
+  @@index([userId])
+  @@index([slug])
+  @@map("hubs")
+}
+
+model Link {
+  id            Int      @id @default(autoincrement())
+  hubId         Int      @map("hub_id")
+  url           String
+  title         String
+  isActive      Boolean  @default(true) @map("is_active")
+  priorityScore Int      @default(0) @map("priority_score")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  hub       Hub        @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  rules     Rule[]
+  analytics Analytics[]
+
+  @@index([hubId])
+  @@map("links")
+}
+
+model Rule {
+  id        Int      @id @default(autoincrement())
+  linkId    Int      @map("link_id")
+  type      String   // 'time' | 'device' | 'geo' | 'performance'
+  value     Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  link Link @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([linkId])
+  @@map("rules")
+}
+
+model Analytics {
+  id        Int      @id @default(autoincrement())
+  linkId    Int?     @map("link_id")  // null for hub-only visits
+  hubId     Int?     @map("hub_id")   // set for hub visits
+  device    String
+  country   String
+  timestamp DateTime @default(now()) @map("timestamp")
+
+  link Link? @relation(fields: [linkId], references: [id], onDelete: SetNull)
+  hub  Hub?  @relation(fields: [hubId], references: [id], onDelete: SetNull)
+
+  @@index([linkId])
+  @@index([hubId])
+  @@index([timestamp])
+  @@map("analytics")
+}
