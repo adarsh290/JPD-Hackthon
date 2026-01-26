@@ -240,7 +240,7 @@
   }
 
   .modal-content {
-    @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 max-h-[85vh] overflow-y-auto;
+    @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 max-h-[90vh] overflow-y-auto;
     background: #000000 !important; /* Solid black background */
     border: 1px solid #00FF00 !important; /* Neon green border */
   }
@@ -251,7 +251,7 @@
 
   /* Scrollable modal content */
   .modal-scrollable {
-    @apply max-h-[85vh] overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-black;
+    @apply max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-black;
   }
 }
 
