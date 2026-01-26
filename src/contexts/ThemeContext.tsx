@@ -52,49 +52,56 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const applyTheme = (newTheme: Theme) => {
     const root = document.documentElement;
     
-    if (newTheme === 'dark') {
-      root.style.setProperty('--background', '#000000');
-      root.style.setProperty('--foreground', '#ffffff');
-      root.style.setProperty('--card', '#111111');
-      root.style.setProperty('--card-foreground', '#ffffff');
-      root.style.setProperty('--popover', '#111111');
-      root.style.setProperty('--popover-foreground', '#ffffff');
-      root.style.setProperty('--primary', '#00ff00');
-      root.style.setProperty('--primary-foreground', '#000000');
-      root.style.setProperty('--secondary', '#1a1a1a');
-      root.style.setProperty('--secondary-foreground', '#ffffff');
-      root.style.setProperty('--muted', '#1a1a1a');
-      root.style.setProperty('--muted-foreground', '#888888');
-      root.style.setProperty('--accent', '#00ff00');
-      root.style.setProperty('--accent-foreground', '#000000');
-      root.style.setProperty('--destructive', '#ff0000');
-      root.style.setProperty('--destructive-foreground', '#ffffff');
-      root.style.setProperty('--border', '#333333');
-      root.style.setProperty('--input', '#1a1a1a');
-      root.style.setProperty('--ring', '#00ff00');
-    } else {
-      root.style.setProperty('--background', '#ffffff');
-      root.style.setProperty('--foreground', '#000000');
-      root.style.setProperty('--card', '#ffffff');
-      root.style.setProperty('--card-foreground', '#000000');
-      root.style.setProperty('--popover', '#ffffff');
-      root.style.setProperty('--popover-foreground', '#000000');
-      root.style.setProperty('--primary', '#00ff00');
-      root.style.setProperty('--primary-foreground', '#000000');
-      root.style.setProperty('--secondary', '#f5f5f5');
-      root.style.setProperty('--secondary-foreground', '#000000');
-      root.style.setProperty('--muted', '#f5f5f5');
-      root.style.setProperty('--muted-foreground', '#666666');
-      root.style.setProperty('--accent', '#00ff00');
-      root.style.setProperty('--accent-foreground', '#000000');
-      root.style.setProperty('--destructive', '#ff0000');
-      root.style.setProperty('--destructive-foreground', '#ffffff');
-      root.style.setProperty('--border', '#e5e5e5');
-      root.style.setProperty('--input', '#ffffff');
-      root.style.setProperty('--ring', '#00ff00');
-    }
+    // Remove existing theme class
+    root.classList.remove('light', 'dark');
     
-    root.classList.toggle('dark', newTheme === 'dark');
+    // Add new theme class
+    root.classList.add(newTheme);
+    
+    // Apply CSS custom properties for proper theme switching
+    if (newTheme === 'dark') {
+      // Dark theme - Mandatory black background with green accents
+      root.style.setProperty('--background', '0 0% 0%');
+      root.style.setProperty('--foreground', '0 0% 100%');
+      root.style.setProperty('--card', '0 0% 3%');
+      root.style.setProperty('--card-foreground', '0 0% 100%');
+      root.style.setProperty('--popover', '0 0% 2%');
+      root.style.setProperty('--popover-foreground', '0 0% 100%');
+      root.style.setProperty('--primary', '120 100% 50%');
+      root.style.setProperty('--primary-foreground', '0 0% 0%');
+      root.style.setProperty('--secondary', '0 0% 8%');
+      root.style.setProperty('--secondary-foreground', '0 0% 100%');
+      root.style.setProperty('--muted', '0 0% 12%');
+      root.style.setProperty('--muted-foreground', '0 0% 60%');
+      root.style.setProperty('--accent', '120 100% 50%');
+      root.style.setProperty('--accent-foreground', '0 0% 0%');
+      root.style.setProperty('--destructive', '0 100% 50%');
+      root.style.setProperty('--destructive-foreground', '0 0% 100%');
+      root.style.setProperty('--border', '0 0% 20%');
+      root.style.setProperty('--input', '0 0% 8%');
+      root.style.setProperty('--ring', '120 100% 50%');
+    } else {
+      // Light theme - White background with green accents
+      root.style.setProperty('--background', '0 0% 100%');
+      root.style.setProperty('--foreground', '0 0% 0%');
+      root.style.setProperty('--card', '0 0% 100%');
+      root.style.setProperty('--card-foreground', '0 0% 0%');
+      root.style.setProperty('--popover', '0 0% 100%');
+      root.style.setProperty('--popover-foreground', '0 0% 0%');
+      root.style.setProperty('--primary', '120 100% 50%');
+      root.style.setProperty('--primary-foreground', '0 0% 0%');
+      root.style.setProperty('--secondary', '0 0% 96%');
+      root.style.setProperty('--secondary-foreground', '0 0% 0%');
+      root.style.setProperty('--muted', '0 0% 96%');
+      root.style.setProperty('--muted-foreground', '0 0% 40%');
+      root.style.setProperty('--accent', '120 100% 50%');
+      root.style.setProperty('--accent-foreground', '0 0% 0%');
+      root.style.setProperty('--destructive', '0 100% 50%');
+      root.style.setProperty('--destructive-foreground', '0 0% 100%');
+      root.style.setProperty('--border', '0 0% 90%');
+      root.style.setProperty('--input', '0 0% 100%');
+      root.style.setProperty('--ring', '120 100% 50%');
+    }
   };
 
   const toggleTheme = () => {

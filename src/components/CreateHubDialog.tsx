@@ -32,7 +32,7 @@ export function CreateHubDialog({ open, onOpenChange }: CreateHubDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-primary/30 scanlines">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="text-xl font-display glow-text">&gt; CREATE_NEW_HUB</DialogTitle>
           <DialogDescription className="text-muted-foreground">

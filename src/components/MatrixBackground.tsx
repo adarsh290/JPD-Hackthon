@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export function MatrixBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -31,7 +33,9 @@ export function MatrixBackground() {
 
       for (let i = 0; i < drops.length; i++) {
         const text = chars[Math.floor(Math.random() * chars.length)];
-        ctx!.globalAlpha = Math.random() * 0.07 + 0.01; // Maximum opacity of 0.07
+        // Theme-aware opacity: 0.05 for dark mode, 0.02 for light mode
+        const maxOpacity = theme === 'dark' ? 0.05 : 0.02;
+        ctx!.globalAlpha = Math.random() * maxOpacity + 0.01;
         ctx!.fillText(text, i * fontSize, drops[i] * fontSize);
 
         if (drops[i] * fontSize > canvas!.height && Math.random() > 0.975) {
@@ -55,13 +59,16 @@ export function MatrixBackground() {
       clearInterval(interval);
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [theme]); // Re-run effect when theme changes
 
   return (
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: -1, opacity: 0.07 }} // Strictly behind all containers with max opacity 0.07
+      style={{ 
+        zIndex: -1, 
+        opacity: theme === 'dark' ? 0.05 : 0.02 // Theme-aware canvas opacity
+      }}
     />
   );
 }
