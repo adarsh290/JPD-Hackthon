@@ -57,7 +57,7 @@ services:
         fromService:
           type: web
           name: smart-link-hub-backend
-          property: host
+          envVarKey: RENDER_EXTERNAL_URL
 
 databases:
   - name: smart-link-hub-db
