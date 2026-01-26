@@ -72,7 +72,7 @@ export function LinkEditor({ hubId, link, open, onClose, onSave }: LinkEditorPro
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-card border-primary/30 scanlines max-w-lg">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-xl font-display glow-text">
             {link ? '> EDIT_LINK' : '> CREATE_LINK'}
