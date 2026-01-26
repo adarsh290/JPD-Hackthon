@@ -28,4 +28,11 @@ router.post(
   analyticsController.trackClick.bind(analyticsController)
 );
 
+// Simple click tracking endpoint (matches frontend call)
+router.post(
+  '/click',
+  resolverLimiter,
+  analyticsController.trackSimpleClick.bind(analyticsController)
+);
+
 export default router;

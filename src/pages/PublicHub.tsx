@@ -1,133 +1,99 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { supabase } from '@/integrations/supabase/client';
-import { trackHubVisit, trackLinkClick } from '@/hooks/useAnalytics';
 import { Card, CardContent } from '@/components/ui/card';
 import { HackerBackground } from '@/components/HackerBackground';
 import { ExternalLink, Loader2 } from 'lucide-react';
-import type { Hub, Link } from '@/hooks/useHubs';
 
-function getDeviceType(): string {
-  const ua = navigator.userAgent;
-  if (/mobile/i.test(ua)) return 'mobile';
-  if (/tablet/i.test(ua)) return 'tablet';
-  return 'desktop';
+interface ResolvedLink {
+  id: number;
+  title: string;
+  url: string;
+  position: number;
 }
 
-function isWithinTimeRange(start: string | null, end: string | null): boolean {
-  if (!start && !end) return true;
-  
-  const now = new Date();
-  const currentTime = now.getHours() * 60 + now.getMinutes();
-  
-  if (start) {
-    const [startH, startM] = start.split(':').map(Number);
-    const startMinutes = startH * 60 + startM;
-    if (currentTime < startMinutes) return false;
-  }
-  
-  if (end) {
-    const [endH, endM] = end.split(':').map(Number);
-    const endMinutes = endH * 60 + endM;
-    if (currentTime > endMinutes) return false;
-  }
-  
-  return true;
-}
-
-function shouldShowLink(link: Link, deviceType: string): boolean {
-  if (!link.is_active) return false;
-  
-  // Time-based rule
-  if (!isWithinTimeRange(link.time_start, link.time_end)) return false;
-  
-  // Device-based rule
-  if (link.device_type && link.device_type !== 'all') {
-    if (link.device_type !== deviceType) return false;
-  }
-  
-  return true;
-}
-
-function sortLinks(links: Link[]): Link[] {
-  // Separate auto-sort and manual links
-  const autoSortLinks = links.filter(l => l.auto_sort_enabled);
-  const manualLinks = links.filter(l => !l.auto_sort_enabled);
-  
-  // Sort auto-sort links by click count
-  autoSortLinks.sort((a, b) => b.click_count - a.click_count);
-  
-  // Sort manual links by position
-  manualLinks.sort((a, b) => a.position - b.position);
-  
-  // Auto-sort links go to top, then manual links
-  return [...autoSortLinks, ...manualLinks];
+interface ResolverResponse {
+  hub: { id: number; title: string; slug: string };
+  links: ResolvedLink[];
 }
 
 export default function PublicHub() {
   const { slug } = useParams<{ slug: string }>();
-  const [hub, setHub] = useState<Hub | null>(null);
-  const [links, setLinks] = useState<Link[]>([]);
+  const [hubData, setHubData] = useState<ResolverResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deviceType] = useState(getDeviceType());
 
   useEffect(() => {
     async function fetchHub() {
       if (!slug) return;
 
       try {
-        // Fetch hub
-        const { data: hubData, error: hubError } = await supabase
-          .from('hubs')
-          .select('*')
-          .eq('slug', slug)
-          .eq('is_active', true)
-          .maybeSingle();
+        console.log('🔍 Fetching hub data for slug:', slug);
+        
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        const response = await fetch(`${apiUrl}/api/resolve/${slug}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-        if (hubError) throw hubError;
-        if (!hubData) {
-          setError('Hub not found');
-          setLoading(false);
+        console.log('📡 API Response status:', response.status);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('❌ API Error:', errorData);
+          
+          if (response.status === 404) {
+            setError('Hub not found');
+          } else if (errorData.error?.message === 'No links currently active for your context') {
+            setError('No links currently active for your context');
+          } else {
+            setError(errorData.error?.message || 'Failed to load hub');
+          }
           return;
         }
 
-        setHub(hubData as Hub);
+        const result = await response.json();
+        console.log('✅ Hub data received:', result);
 
-        // Track visit
-        trackHubVisit(hubData.id, deviceType);
-
-        // Fetch links
-        const { data: linksData, error: linksError } = await supabase
-          .from('links')
-          .select('*')
-          .eq('hub_id', hubData.id);
-
-        if (linksError) throw linksError;
-
-        setLinks(linksData as Link[]);
+        if (result.success && result.data) {
+          setHubData(result.data);
+        } else {
+          setError('Invalid response format');
+        }
       } catch (err: any) {
-        setError(err.message);
+        console.error('❌ Network error:', err);
+        setError('Network error - please check your connection');
       } finally {
         setLoading(false);
       }
     }
 
     fetchHub();
-  }, [slug, deviceType]);
+  }, [slug]);
 
-  const handleLinkClick = async (link: Link) => {
-    if (hub) {
-      trackLinkClick(link.id, hub.id, deviceType);
+  const handleLinkClick = async (link: ResolvedLink) => {
+    try {
+      // Track link click
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      await fetch(`${apiUrl}/api/analytics/click`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          linkId: link.id,
+          hubId: hubData?.hub.id,
+        }),
+      }).catch(err => console.warn('Analytics tracking failed:', err));
+    } catch (err) {
+      console.warn('Failed to track click:', err);
     }
+
+    // Open link
     window.open(link.url, '_blank');
   };
-
-  // Filter and sort links based on rules
-  const visibleLinks = sortLinks(
-    links.filter(link => shouldShowLink(link, deviceType))
-  );
 
   if (loading) {
     return (
@@ -138,13 +104,15 @@ export default function PublicHub() {
     );
   }
 
-  if (error || !hub) {
+  if (error || !hubData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <HackerBackground />
         <Card variant="terminal" className="max-w-md w-full mx-4 relative z-10">
           <CardContent className="p-8 text-center">
-            <h1 className="text-2xl font-display mb-2 glow-text">404_NOT_FOUND</h1>
+            <h1 className="text-2xl font-display mb-2 glow-text">
+              {error === 'Hub not found' ? '404_NOT_FOUND' : 'NO_LINKS_AVAILABLE'}
+            </h1>
             <p className="text-muted-foreground">
               {error || 'This hub does not exist or is not active'}
             </p>
@@ -164,15 +132,12 @@ export default function PublicHub() {
           className="text-center mb-8"
         >
           <h1 className="text-3xl font-display font-bold glow-text mb-2">
-            {hub.name}
+            {hubData.hub.title}
           </h1>
-          {hub.description && (
-            <p className="text-muted-foreground">{hub.description}</p>
-          )}
         </motion.div>
 
         <div className="space-y-3">
-          {visibleLinks.map((link, index) => (
+          {hubData.links.map((link, index) => (
             <motion.div
               key={link.id}
               initial={{ opacity: 0, y: 20 }}
@@ -199,10 +164,10 @@ export default function PublicHub() {
           ))}
         </div>
 
-        {visibleLinks.length === 0 && (
+        {hubData.links.length === 0 && (
           <Card variant="terminal" className="text-center py-8">
             <CardContent>
-              <p className="text-muted-foreground">No links available right now</p>
+              <p className="text-muted-foreground">No links currently active for your context</p>
             </CardContent>
           </Card>
         )}

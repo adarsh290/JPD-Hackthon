@@ -15,12 +15,15 @@ export interface RequestContext {
  */
 async function detectCountry(ipAddress: string | undefined): Promise<string | undefined> {
   if (!ipAddress || ipAddress === '::1' || ipAddress.startsWith('127.') || ipAddress.startsWith('192.168.') || ipAddress.startsWith('10.')) {
-    return undefined; // Localhost or private network
+    console.log('🏠 Local/private IP detected, skipping GeoIP lookup:', ipAddress);
+    return 'IN'; // Fallback to India for local development
   }
 
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
+    console.log('🌍 Attempting GeoIP lookup for:', ipAddress);
 
     const response = await fetch(`https://ipapi.co/${ipAddress}/json/`, {
       signal: controller.signal,
@@ -32,25 +35,27 @@ async function detectCountry(ipAddress: string | undefined): Promise<string | un
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.warn(`GeoIP API returned ${response.status} for IP ${ipAddress}`);
-      return 'unknown';
+      console.warn(`⚠️ GeoIP API returned ${response.status} for IP ${ipAddress}, falling back to IN`);
+      return 'IN';
     }
 
     const data = await response.json() as { country_code?: string; error?: boolean };
     
     if (data.error || !data.country_code) {
-      console.warn(`GeoIP API error for IP ${ipAddress}:`, data);
-      return 'unknown';
+      console.warn(`⚠️ GeoIP API error for IP ${ipAddress}:`, data, 'falling back to IN');
+      return 'IN';
     }
 
-    return data.country_code.toUpperCase();
+    const countryCode = data.country_code.toUpperCase();
+    console.log('✅ GeoIP lookup successful:', { ip: ipAddress, country: countryCode });
+    return countryCode;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.warn(`GeoIP API timeout for IP ${ipAddress}`);
+      console.warn(`⏱️ GeoIP API timeout for IP ${ipAddress}, falling back to IN`);
     } else {
-      console.warn(`GeoIP detection failed for IP ${ipAddress}:`, error);
+      console.warn(`❌ GeoIP detection failed for IP ${ipAddress}:`, error, 'falling back to IN');
     }
-    return 'unknown';
+    return 'IN'; // Fallback to India instead of 'unknown'
   }
 }
 

@@ -47,6 +47,41 @@ export class AnalyticsController {
       message: 'Click tracked',
     });
   }
+
+  async trackSimpleClick(req: Request, res: Response) {
+    try {
+      const { linkId, hubId } = req.body;
+      
+      if (!linkId || !hubId) {
+        return res.status(400).json({
+          success: false,
+          error: { message: 'linkId and hubId are required' }
+        });
+      }
+
+      const context = await detectContext(req);
+      
+      console.log('📊 Tracking click:', { linkId, hubId, context: context.deviceType, country: context.country });
+      
+      await analyticsService.trackClick(linkId.toString(), hubId.toString(), {
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+        deviceType: context.deviceType,
+        country: context.country,
+      });
+
+      res.json({
+        success: true,
+        message: 'Click tracked',
+      });
+    } catch (error) {
+      console.error('❌ Click tracking error:', error);
+      res.status(500).json({
+        success: false,
+        error: { message: 'Failed to track click' }
+      });
+    }
+  }
 }
 
 export const analyticsController = new AnalyticsController();

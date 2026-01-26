@@ -59,34 +59,80 @@ function isTimeRuleValid(value: TimeValue, timestamp: Date): boolean {
  * Determines if a link should be shown based on time, device, geo, and performance rules.
  */
 export function shouldShowLink(link: LinkWithRules, context: RequestContext): boolean {
-  if (!link.isActive) return false;
-  if (!link.rules || link.rules.length === 0) return true;
+  console.log(`🔍 Evaluating link "${link.title}" (ID: ${link.id}):`, {
+    isActive: link.isActive,
+    rulesCount: link.rules?.length || 0,
+    context: {
+      deviceType: context.deviceType,
+      country: context.country,
+      timestamp: context.timestamp.toISOString(),
+    }
+  });
+
+  if (!link.isActive) {
+    console.log(`❌ Link "${link.title}" is inactive`);
+    return false;
+  }
+
+  // If no rules exist, show the link by default
+  if (!link.rules || link.rules.length === 0) {
+    console.log(`✅ Link "${link.title}" has no rules - showing by default`);
+    return true;
+  }
 
   for (const rule of link.rules) {
     const value = rule.value as Record<string, unknown>;
+    console.log(`🔧 Evaluating rule:`, { type: rule.type, value });
 
     if (rule.type === 'time') {
-      if (!isTimeRuleValid(value as TimeValue, context.timestamp)) return false;
+      const isValid = isTimeRuleValid(value as TimeValue, context.timestamp);
+      console.log(`⏰ Time rule result: ${isValid}`);
+      if (!isValid) return false;
     }
 
     if (rule.type === 'device') {
       const v = value as DeviceValue;
-      if (v.allowed && v.allowed.length > 0 && !v.allowed.includes(context.deviceType)) return false;
+      if (v.allowed && v.allowed.length > 0 && !v.allowed.includes(context.deviceType)) {
+        console.log(`📱 Device rule failed: ${context.deviceType} not in allowed [${v.allowed.join(', ')}]`);
+        return false;
+      }
+      console.log(`📱 Device rule passed: ${context.deviceType}`);
     }
 
-    if (rule.type === 'geo' && context.country) {
+    if (rule.type === 'geo') {
       const v = value as GeoValue;
-      if (v.blocked?.includes(context.country)) return false;
-      if (v.allowed && v.allowed.length > 0 && !v.allowed.includes(context.country)) return false;
+      
+      // Skip geo filtering if country is undefined/unknown (VPN, localhost, etc.)
+      if (!context.country || context.country === 'unknown') {
+        console.log(`🌍 Geo rule skipped: country is ${context.country || 'undefined'}`);
+        continue; // Skip this rule, don't fail the link
+      }
+
+      if (v.blocked?.includes(context.country)) {
+        console.log(`🚫 Geo rule failed: ${context.country} is blocked`);
+        return false;
+      }
+      
+      if (v.allowed && v.allowed.length > 0 && !v.allowed.includes(context.country)) {
+        console.log(`🌍 Geo rule failed: ${context.country} not in allowed [${v.allowed.join(', ')}]`);
+        return false;
+      }
+      
+      console.log(`🌍 Geo rule passed: ${context.country}`);
     }
 
     if (rule.type === 'performance') {
       const v = value as PerformanceValue;
       const count = link._count?.analytics ?? 0;
-      if (v.minClicks != null && count < v.minClicks) return false;
+      if (v.minClicks != null && count < v.minClicks) {
+        console.log(`📊 Performance rule failed: ${count} clicks < ${v.minClicks} required`);
+        return false;
+      }
+      console.log(`📊 Performance rule passed: ${count} clicks >= ${v.minClicks || 0} required`);
     }
   }
 
+  console.log(`✅ Link "${link.title}" passed all rules`);
   return true;
 }
 

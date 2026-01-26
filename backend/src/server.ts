@@ -18,10 +18,33 @@ const app = express();
 // Security middleware
 app.use(helmet());
 
-// CORS
+// CORS - Allow multiple origins for development and production
+const allowedOrigins = [
+  config.cors.origin,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://localhost:5173',
+].filter(Boolean);
+
+console.log('🔗 CORS allowed origins:', allowedOrigins);
+
 app.use(
   cors({
-    origin: config.cors.origin,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, etc.)
+      if (!origin) return callback(null, true);
+      
+      // Remove trailing slash for comparison
+      const normalizedOrigin = origin.replace(/\/$/, '');
+      const normalizedAllowed = allowedOrigins.map(o => o.replace(/\/$/, ''));
+      
+      if (normalizedAllowed.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+      
+      console.warn('❌ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   })
 );

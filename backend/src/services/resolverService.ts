@@ -21,16 +21,32 @@ export class ResolverService {
    * logs the hub visit in Analytics, and returns filtered/sorted links.
    */
   async resolve(slug: string, context: RequestContext): Promise<ResolverResponse> {
+    console.log('🔍 Resolver Service - Incoming Request:', {
+      slug,
+      context: {
+        deviceType: context.deviceType,
+        country: context.country,
+        ipAddress: context.ipAddress,
+        timestamp: context.timestamp.toISOString(),
+      }
+    });
+
     const normalizedSlug = slug.toLowerCase().trim();
 
     const hub = await prisma.hub.findFirst({
-      where: { slug: normalizedSlug },
+      where: { 
+        slug: normalizedSlug,
+        isActive: true // Ensure hub is active
+      },
       select: { id: true, title: true, slug: true },
     });
 
     if (!hub) {
+      console.log('❌ Hub not found or inactive:', normalizedSlug);
       throw new AppError(404, 'Hub not found');
     }
+
+    console.log('✅ Hub found:', hub);
 
     await this.trackVisit(hub.id, context);
 
@@ -42,7 +58,42 @@ export class ResolverService {
       },
     });
 
+    console.log('📊 Raw links from database:', {
+      totalLinks: links.length,
+      links: links.map(link => ({
+        id: link.id,
+        title: link.title,
+        isActive: link.isActive,
+        rulesCount: link.rules.length,
+        analyticsCount: link._count.analytics,
+      }))
+    });
+
+    // Handle case where no rules exist - show all active links
+    if (links.length === 0) {
+      console.log('⚠️ No active links found for hub');
+      return {
+        hub: { id: hub.id, title: hub.title, slug: hub.slug },
+        links: [],
+      };
+    }
+
     const sorted = sortLinksByRules(links as LinkWithRules[], context);
+
+    console.log('🎯 Filtered and sorted links:', {
+      filteredCount: sorted.length,
+      links: sorted.map(link => ({
+        id: link.id,
+        title: link.title,
+        priorityScore: link.priorityScore,
+      }))
+    });
+
+    // Check if no links pass the filtering
+    if (sorted.length === 0) {
+      console.log('⚠️ No links available after rule filtering');
+      throw new AppError(200, 'No links currently active for your context');
+    }
 
     return {
       hub: { id: hub.id, title: hub.title, slug: hub.slug },
@@ -68,8 +119,9 @@ export class ResolverService {
           country: context.country ?? 'unknown',
         },
       });
+      console.log('📈 Analytics visit tracked:', { hubId, device: context.deviceType, country: context.country });
     } catch (err) {
-      console.error('Analytics trackVisit error:', err);
+      console.error('❌ Analytics trackVisit error:', err);
     }
   }
 }
