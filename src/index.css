@@ -236,11 +236,11 @@
 
   /* Modal standardization utilities */
   .modal-overlay {
-    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-40;
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-[90];
   }
 
   .modal-content {
-    @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 max-h-[90vh] overflow-y-auto;
+    @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] max-h-[90vh] overflow-y-auto;
     background: #000000 !important; /* Solid black background */
     border: 1px solid #00FF00 !important; /* Neon green border */
   }
