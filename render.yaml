@@ -4,7 +4,7 @@ services:
     name: smart-link-hub-backend
     runtime: node
     rootDir: backend
-    buildCommand: npm install && npx prisma generate && npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm start
     plan: starter
     region: oregon
