@@ -1,18 +1,24 @@
 import { useEffect, useRef } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 
-interface Drop {
+interface BinaryDigit {
   x: number;
   y: number;
-  speed: number;
-  opacity: number;
   char: string;
+  opacity: number;
+}
+
+interface Column {
+  x: number;
+  digits: BinaryDigit[];
+  speed: number;
+  nextDigitTimer: number;
 }
 
 export function HackerBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
-  const dropsRef = useRef<Drop[]>([]);
+  const columnsRef = useRef<Column[]>([]);
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -22,26 +28,29 @@ export function HackerBackground() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Configuration
+    const fontSize = 20;
+    const digitSpacing = 35; // Vertical gap between digits
+    const columnWidth = 25; // Horizontal spacing between columns
+
     // Set canvas size
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      initializeDrops();
+      initializeColumns();
     };
 
-    // Initialize drops for each column
-    const initializeDrops = () => {
-      const fontSize = 18;
-      const columns = Math.floor(canvas.width / fontSize);
-      dropsRef.current = [];
+    // Initialize columns
+    const initializeColumns = () => {
+      const numColumns = Math.floor(canvas.width / columnWidth);
+      columnsRef.current = [];
 
-      for (let i = 0; i < columns; i++) {
-        dropsRef.current.push({
-          x: i * fontSize,
-          y: Math.random() * -canvas.height, // Start above screen
-          speed: Math.random() * 1.5 + 0.5, // Moderate speed between 0.5-2
-          opacity: Math.random() * 0.4 + 0.6, // Random opacity between 0.6-1
-          char: Math.random() > 0.5 ? '1' : '0', // Pre-generate character
+      for (let i = 0; i < numColumns; i++) {
+        columnsRef.current.push({
+          x: i * columnWidth,
+          digits: [],
+          speed: Math.random() * 0.8 + 0.4, // Slower speed between 0.4-1.2
+          nextDigitTimer: Math.random() * 100, // Random start delay
         });
       }
     };
@@ -53,45 +62,51 @@ export function HackerBackground() {
     // Animation loop with FPS control
     const animate = (currentTime: number) => {
       if (currentTime - lastTime >= frameInterval) {
-        // Clear canvas with theme-appropriate background for trailing effect
-        if (theme === 'dark') {
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; // Dark trailing effect
-        } else {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.05)'; // Light trailing effect
-        }
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Clear canvas completely each frame (no trailing effect)
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Set font properties
-        ctx.font = 'bold 18px monospace';
+        // Set font and glow properties
+        ctx.font = `bold ${fontSize}px monospace`;
         ctx.fillStyle = '#00FF00'; // Pure green
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#00FF00';
 
-        // Draw and update each drop
-        dropsRef.current.forEach((drop) => {
-          // Set opacity based on theme
-          const baseOpacity = theme === 'dark' ? drop.opacity : drop.opacity * 0.1;
-          ctx.globalAlpha = baseOpacity;
-
-          // Draw character
-          ctx.fillText(drop.char, drop.x, drop.y);
-
-          // Update position
-          drop.y += drop.speed;
-
-          // Occasionally change character for variety
-          if (Math.random() < 0.02) {
-            drop.char = Math.random() > 0.5 ? '1' : '0';
+        // Process each column
+        columnsRef.current.forEach((column) => {
+          // Add new digit at top of column
+          column.nextDigitTimer--;
+          if (column.nextDigitTimer <= 0) {
+            column.digits.push({
+              x: column.x,
+              y: -fontSize,
+              char: Math.random() > 0.5 ? '1' : '0',
+              opacity: Math.random() * 0.3 + 0.7, // Random opacity between 0.7-1
+            });
+            column.nextDigitTimer = digitSpacing / column.speed; // Time until next digit
           }
 
-          // Reset drop when it goes off screen
-          if (drop.y > canvas.height + 30) {
-            drop.y = Math.random() * -200 - 30; // Reset above screen
-            drop.speed = Math.random() * 1.5 + 0.5; // New random speed
-            drop.opacity = Math.random() * 0.4 + 0.6; // New random opacity
-            drop.char = Math.random() > 0.5 ? '1' : '0'; // New character
-          }
+          // Update and draw existing digits
+          column.digits = column.digits.filter((digit) => {
+            // Update position
+            digit.y += column.speed;
+
+            // Set opacity based on theme
+            const finalOpacity = theme === 'dark' 
+              ? digit.opacity * 0.08 // Dark mode: 0.05-0.08 range
+              : digit.opacity * 0.1;  // Light mode: 0.1 range
+
+            ctx.globalAlpha = finalOpacity;
+
+            // Draw digit
+            ctx.fillText(digit.char, digit.x, digit.y);
+
+            // Keep digit if still on screen
+            return digit.y < canvas.height + fontSize;
+          });
         });
 
-        // Reset global alpha
+        // Reset shadow and alpha
+        ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
         lastTime = currentTime;
       }
@@ -125,7 +140,7 @@ export function HackerBackground() {
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none"
       style={{ 
-        zIndex: -1,
+        zIndex: -10, // Updated to -10 as requested
         width: '100vw',
         height: '100vh'
       }}
