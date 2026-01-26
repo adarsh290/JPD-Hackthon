@@ -240,13 +240,18 @@
   }
 
   .modal-content {
-    @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50;
+    @apply fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 max-h-[85vh] overflow-y-auto;
     background: #000000 !important; /* Solid black background */
     border: 1px solid #00FF00 !important; /* Neon green border */
   }
 
   .modal-close-button {
     @apply text-primary hover:text-primary/80;
+  }
+
+  /* Scrollable modal content */
+  .modal-scrollable {
+    @apply max-h-[85vh] overflow-y-auto scrollbar-thin scrollbar-thumb-primary scrollbar-track-black;
   }
 }
 
@@ -267,6 +272,52 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(120, 100%, 50%);
+}
+
+/* Hacker-themed scrollbar for modals */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #00FF00 #000000;
+}
+
+.scrollbar-thumb-primary {
+  scrollbar-color: #00FF00 #000000;
+}
+
+.scrollbar-track-black {
+  scrollbar-color: #00FF00 #000000;
+}
+
+/* Webkit scrollbar for hacker theme */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #000000;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #00FF00;
+  border-radius: 3px;
+  border: 1px solid #000000;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #00CC00;
+}
+
+.scrollbar-thin::-webkit-scrollbar-corner {
+  background: #000000;
+}
+
+/* Body scroll prevention when modal is open */
+body.modal-open {
+  overflow: hidden !important;
+  position: fixed;
+  width: 100%;
 }
 
 /* Selection - Always Green */
