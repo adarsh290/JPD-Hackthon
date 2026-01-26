@@ -46,8 +46,6 @@ export default function PublicHub() {
           
           if (response.status === 404) {
             setError('Hub not found');
-          } else if (errorData.error?.message === 'No links currently active for your context') {
-            setError('No links currently active for your context');
           } else {
             setError(errorData.error?.message || 'Failed to load hub');
           }
@@ -59,6 +57,10 @@ export default function PublicHub() {
 
         if (result.success && result.data) {
           setHubData(result.data);
+          // If no links, set a friendly message but don't treat as error
+          if (result.data.links.length === 0) {
+            console.log('⚠️ Hub has no active links for current context');
+          }
         } else {
           setError('Invalid response format');
         }

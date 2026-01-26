@@ -57,6 +57,8 @@ function isTimeRuleValid(value: TimeValue, timestamp: Date): boolean {
 
 /**
  * Determines if a link should be shown based on time, device, geo, and performance rules.
+ * IMPORTANT: If a link has NO rules, it should ALWAYS be shown (default behavior).
+ * If a link has rules, ALL rules must pass for the link to be shown.
  */
 export function shouldShowLink(link: LinkWithRules, context: RequestContext): boolean {
   console.log(`🔍 Evaluating link "${link.title}" (ID: ${link.id}):`, {
@@ -80,6 +82,7 @@ export function shouldShowLink(link: LinkWithRules, context: RequestContext): bo
     return true;
   }
 
+  // Evaluate each rule - ALL must pass
   for (const rule of link.rules) {
     const value = rule.value as Record<string, unknown>;
     console.log(`🔧 Evaluating rule:`, { type: rule.type, value });
@@ -87,16 +90,22 @@ export function shouldShowLink(link: LinkWithRules, context: RequestContext): bo
     if (rule.type === 'time') {
       const isValid = isTimeRuleValid(value as TimeValue, context.timestamp);
       console.log(`⏰ Time rule result: ${isValid}`);
-      if (!isValid) return false;
+      if (!isValid) {
+        console.log(`❌ Link "${link.title}" failed time rule`);
+        return false;
+      }
     }
 
     if (rule.type === 'device') {
       const v = value as DeviceValue;
-      if (v.allowed && v.allowed.length > 0 && !v.allowed.includes(context.deviceType)) {
-        console.log(`📱 Device rule failed: ${context.deviceType} not in allowed [${v.allowed.join(', ')}]`);
-        return false;
+      // Only filter if allowed list is specified and not empty
+      if (v.allowed && v.allowed.length > 0) {
+        if (!v.allowed.includes(context.deviceType)) {
+          console.log(`❌ Link "${link.title}" failed device rule: ${context.deviceType} not in allowed [${v.allowed.join(', ')}]`);
+          return false;
+        }
       }
-      console.log(`📱 Device rule passed: ${context.deviceType}`);
+      console.log(`✅ Device rule passed: ${context.deviceType}`);
     }
 
     if (rule.type === 'geo') {
@@ -104,31 +113,36 @@ export function shouldShowLink(link: LinkWithRules, context: RequestContext): bo
       
       // Skip geo filtering if country is undefined/unknown (VPN, localhost, etc.)
       if (!context.country || context.country === 'unknown') {
-        console.log(`🌍 Geo rule skipped: country is ${context.country || 'undefined'}`);
+        console.log(`⚠️ Geo rule skipped: country is ${context.country || 'undefined'} - allowing link`);
         continue; // Skip this rule, don't fail the link
       }
 
-      if (v.blocked?.includes(context.country)) {
-        console.log(`🚫 Geo rule failed: ${context.country} is blocked`);
+      // Check blocked list first
+      if (v.blocked && v.blocked.length > 0 && v.blocked.includes(context.country)) {
+        console.log(`❌ Link "${link.title}" failed geo rule: ${context.country} is blocked`);
         return false;
       }
       
-      if (v.allowed && v.allowed.length > 0 && !v.allowed.includes(context.country)) {
-        console.log(`🌍 Geo rule failed: ${context.country} not in allowed [${v.allowed.join(', ')}]`);
-        return false;
+      // Check allowed list only if it's specified and not empty
+      if (v.allowed && v.allowed.length > 0) {
+        if (!v.allowed.includes(context.country)) {
+          console.log(`❌ Link "${link.title}" failed geo rule: ${context.country} not in allowed [${v.allowed.join(', ')}]`);
+          return false;
+        }
       }
       
-      console.log(`🌍 Geo rule passed: ${context.country}`);
+      console.log(`✅ Geo rule passed: ${context.country}`);
     }
 
     if (rule.type === 'performance') {
       const v = value as PerformanceValue;
       const count = link._count?.analytics ?? 0;
-      if (v.minClicks != null && count < v.minClicks) {
-        console.log(`📊 Performance rule failed: ${count} clicks < ${v.minClicks} required`);
+      // Only check minClicks if it's specified
+      if (v.minClicks != null && v.minClicks > 0 && count < v.minClicks) {
+        console.log(`❌ Link "${link.title}" failed performance rule: ${count} clicks < ${v.minClicks} required`);
         return false;
       }
-      console.log(`📊 Performance rule passed: ${count} clicks >= ${v.minClicks || 0} required`);
+      console.log(`✅ Performance rule passed: ${count} clicks >= ${v.minClicks || 0} required`);
     }
   }
 

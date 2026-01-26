@@ -92,7 +92,12 @@ export class ResolverService {
     // Check if no links pass the filtering
     if (sorted.length === 0) {
       console.log('⚠️ No links available after rule filtering');
-      throw new AppError(200, 'No links currently active for your context');
+      // Return empty links array instead of throwing error
+      // This allows the frontend to show a proper message
+      return {
+        hub: { id: hub.id, title: hub.title, slug: hub.slug },
+        links: [],
+      };
     }
 
     return {
