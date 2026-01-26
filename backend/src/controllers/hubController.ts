@@ -5,7 +5,7 @@ import { AppError } from '../middleware/errorHandler.js';
 
 export class HubController {
   async createHub(req: AuthRequest, res: Response) {
-    const { title } = req.body;
+    const { title } = req.body as { title: string };
     
     // Generate unique slug
     const baseSlug = title
@@ -90,7 +90,7 @@ export class HubController {
 
     const updated = await prisma.hub.update({
       where: { id },
-      data: req.body,
+      data: req.body as { title?: string },
     });
 
     res.json({
