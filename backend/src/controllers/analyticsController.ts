@@ -5,7 +5,7 @@ import { detectContext } from '../utils/contextDetector.js';
 import { Request } from 'express';
 
 export class AnalyticsController {
-  async getAnalytics(req: AuthRequest, res: Response) {
+  async getAnalytics(req: AuthRequest, res: Response): Promise<void> {
     const hubId = req.params.hubId as string;
     const analytics = await analyticsService.getHubAnalytics(req.user!.id, hubId);
     res.json({
@@ -14,7 +14,7 @@ export class AnalyticsController {
     });
   }
 
-  async exportAnalytics(req: AuthRequest, res: Response) {
+  async exportAnalytics(req: AuthRequest, res: Response): Promise<void> {
     const hubId = req.params.hubId as string;
     
     try {
@@ -30,7 +30,7 @@ export class AnalyticsController {
     }
   }
 
-  async trackClick(req: Request, res: Response) {
+  async trackClick(req: Request, res: Response): Promise<void> {
     const linkId = req.params.linkId as string;
     const hubId = req.params.hubId as string;
     const context = await detectContext(req);
@@ -48,15 +48,16 @@ export class AnalyticsController {
     });
   }
 
-  async trackSimpleClick(req: Request, res: Response) {
+  async trackSimpleClick(req: Request, res: Response): Promise<void> {
     try {
       const { linkId, hubId } = req.body;
       
       if (!linkId || !hubId) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: { message: 'linkId and hubId are required' }
         });
+        return;
       }
 
       const context = await detectContext(req);

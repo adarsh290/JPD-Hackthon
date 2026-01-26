@@ -6,7 +6,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { config } from '../config/env.js';
 
 export class QRController {
-  async generateHubQR(req: AuthRequest, res: Response) {
+  async generateHubQR(req: AuthRequest, res: Response): Promise<void> {
     const hubId = Number(req.params.id);
     if (Number.isNaN(hubId)) {
       throw new AppError(400, 'Invalid hub ID');

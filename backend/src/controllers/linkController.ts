@@ -4,7 +4,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { AuthRequest } from '../middleware/auth.js';
 
 export class LinkController {
-  async getLinks(req: AuthRequest, res: Response) {
+  async getLinks(req: AuthRequest, res: Response): Promise<void> {
     const hubId = Number(req.params.hubId);
     if (Number.isNaN(hubId)) {
       throw new AppError(400, 'Invalid hub ID');
@@ -29,7 +29,7 @@ export class LinkController {
     res.json({ success: true, data: links });
   }
 
-  async createLink(req: AuthRequest, res: Response) {
+  async createLink(req: AuthRequest, res: Response): Promise<void> {
     const { hubId, title, url, isActive, priorityScore, rules } = req.body as {
       hubId: number;
       title: string;
@@ -69,7 +69,7 @@ export class LinkController {
     res.status(201).json({ success: true, data: link });
   }
 
-  async updateLink(req: AuthRequest, res: Response) {
+  async updateLink(req: AuthRequest, res: Response): Promise<void> {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
       throw new AppError(400, 'Invalid link ID');
@@ -104,7 +104,7 @@ export class LinkController {
     res.json({ success: true, data: updated });
   }
 
-  async deleteLink(req: AuthRequest, res: Response) {
+  async deleteLink(req: AuthRequest, res: Response): Promise<void> {
     const id = Number(req.params.id);
     if (Number.isNaN(id)) {
       throw new AppError(400, 'Invalid link ID');

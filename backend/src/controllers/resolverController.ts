@@ -4,7 +4,7 @@ import { detectContext } from '../utils/contextDetector.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 export class ResolverController {
-  async resolve(req: Request, res: Response) {
+  async resolve(req: Request, res: Response): Promise<void> {
     try {
       const slug = req.params.slug as string;
       console.log('🎯 Resolver Controller - Processing request for slug:', slug);
@@ -27,21 +27,23 @@ export class ResolverController {
       if (error instanceof AppError) {
         // Handle specific "no links" case with 200 status but empty links
         if (error.message === 'No links currently active for your context') {
-          return res.status(200).json({
+          res.status(200).json({
             success: false,
             error: {
               message: error.message,
               code: 'NO_ACTIVE_LINKS'
             }
           });
+          return;
         }
         
-        return res.status(error.statusCode).json({
+        res.status(error.statusCode).json({
           success: false,
           error: {
             message: error.message,
           },
         });
+        return;
       }
       
       // Generic error

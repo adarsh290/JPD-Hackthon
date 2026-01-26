@@ -4,7 +4,7 @@ import { detectContext } from '../utils/contextDetector.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 export class ShortUrlController {
-  async redirectToHub(req: Request, res: Response) {
+  async redirectToHub(req: Request, res: Response): Promise<void> {
     const slug = req.params.slug as string;
     
     if (!slug) {
@@ -23,6 +23,7 @@ export class ShortUrlController {
       if (error instanceof AppError && error.statusCode === 404) {
         // Hub not found, redirect to 404 page
         res.redirect(302, '/404');
+        return;
       } else {
         throw error;
       }
