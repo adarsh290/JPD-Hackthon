@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { trackHubVisit, trackLinkClick } from '@/hooks/useAnalytics';
 import { Card, CardContent } from '@/components/ui/card';
+import { HackerBackground } from '@/components/HackerBackground';
 import { ExternalLink, Loader2 } from 'lucide-react';
 import type { Hub, Link } from '@/hooks/useHubs';
 
@@ -131,7 +132,8 @@ export default function PublicHub() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <HackerBackground />
+        <Loader2 className="w-8 h-8 text-primary animate-spin relative z-10" />
       </div>
     );
   }
@@ -139,7 +141,8 @@ export default function PublicHub() {
   if (error || !hub) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Card variant="terminal" className="max-w-md w-full mx-4">
+        <HackerBackground />
+        <Card variant="terminal" className="max-w-md w-full mx-4 relative z-10">
           <CardContent className="p-8 text-center">
             <h1 className="text-2xl font-display mb-2 glow-text">404_NOT_FOUND</h1>
             <p className="text-muted-foreground">
@@ -153,7 +156,8 @@ export default function PublicHub() {
 
   return (
     <div className="min-h-screen py-12 px-4">
-      <div className="max-w-md mx-auto">
+      <HackerBackground />
+      <div className="max-w-md mx-auto relative z-10">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}

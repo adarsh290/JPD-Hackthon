@@ -1,7 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { AuthForm } from '@/components/AuthForm';
 import { Dashboard } from '@/components/Dashboard';
-import { MatrixBackground } from '@/components/MatrixBackground';
+import { HackerBackground } from '@/components/HackerBackground';
 import { Loader2 } from 'lucide-react';
 
 const Index = () => {
@@ -10,7 +10,7 @@ const Index = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <MatrixBackground />
+        <HackerBackground />
         <Loader2 className="w-8 h-8 text-primary animate-spin relative z-10" />
       </div>
     );
@@ -18,7 +18,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen scanlines">
-      <MatrixBackground />
+      <HackerBackground />
       <div className="relative z-10">
         {user ? (
           <Dashboard />
