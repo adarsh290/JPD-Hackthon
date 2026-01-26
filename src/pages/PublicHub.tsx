@@ -23,15 +23,27 @@ export default function PublicHub() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  console.log('🔍 SLUG_DETECTED:', slug);
+  console.log('📍 Current URL:', window.location.href);
+  console.log('🌐 API URL:', import.meta.env.VITE_API_URL);
+
   useEffect(() => {
     async function fetchHub() {
-      if (!slug) return;
+      if (!slug) {
+        console.error('❌ No slug provided');
+        setError('No hub slug provided');
+        setLoading(false);
+        return;
+      }
 
       try {
         console.log('🔍 Fetching hub data for slug:', slug);
         
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-        const response = await fetch(`${apiUrl}/api/resolve/${slug}`, {
+        const fullUrl = `${apiUrl}/api/resolve/${slug}`;
+        console.log('📡 Full API URL:', fullUrl);
+        
+        const response = await fetch(fullUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
