@@ -181,6 +181,11 @@
     box-shadow: var(--glow-intense);
     border-color: hsl(120, 100%, 50%, 0.6);
   }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
 }
 
 /* Scrollbar styling */

@@ -54,36 +54,36 @@ export function Dashboard() {
           transition={{ delay: 0.1 }}
           className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
         >
-          <Card variant="terminal">
+          <Card variant="stats">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Link2 className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-muted-foreground text-sm">TOTAL_HUBS</p>
-                <p className="text-2xl font-bold font-display">{hubs.length}</p>
+                <p className="text-muted-foreground text-sm font-semibold">TOTAL_HUBS</p>
+                <p className="text-2xl font-bold font-mono tabular-nums">{hubs.length}</p>
               </div>
             </CardContent>
           </Card>
-          <Card variant="terminal">
+          <Card variant="stats">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                 <BarChart3 className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-muted-foreground text-sm">TOTAL_VISITS</p>
-                <p className="text-2xl font-bold font-display">{totalVisits}</p>
+                <p className="text-muted-foreground text-sm font-semibold">TOTAL_VISITS</p>
+                <p className="text-2xl font-bold font-mono tabular-nums">{totalVisits}</p>
               </div>
             </CardContent>
           </Card>
-          <Card variant="terminal">
+          <Card variant="stats">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Zap className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-muted-foreground text-sm">ACTIVE_HUBS</p>
-                <p className="text-2xl font-bold font-display">
+                <p className="text-muted-foreground text-sm font-semibold">ACTIVE_HUBS</p>
+                <p className="text-2xl font-bold font-mono tabular-nums">
                   {hubs.filter(h => h.is_active).length}
                 </p>
               </div>
@@ -117,19 +117,26 @@ export function Dashboard() {
               ))}
             </div>
           ) : hubs.length === 0 ? (
-            <Card variant="terminal" className="text-center py-16">
+            <Card variant="empty" className="text-center py-16">
               <CardContent>
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
                   <Link2 className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-display mb-2">NO_HUBS_FOUND</h3>
-                <p className="text-muted-foreground mb-6">
+                <h3 className="text-2xl font-display font-bold mb-3 text-foreground brightness-125">NO_HUBS_FOUND</h3>
+                <p className="text-muted-foreground mb-8 text-lg font-medium brightness-110">
                   Create your first Link Hub to get started
                 </p>
-                <Button variant="cyber" onClick={() => setShowCreateDialog(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  CREATE_FIRST_HUB
-                </Button>
+                <div className="flex justify-center">
+                  <Button 
+                    variant="cta" 
+                    size="cta"
+                    onClick={() => setShowCreateDialog(true)}
+                    className="shadow-xl"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    CREATE_FIRST_HUB
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (

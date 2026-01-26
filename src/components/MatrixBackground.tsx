@@ -31,7 +31,7 @@ export function MatrixBackground() {
 
       for (let i = 0; i < drops.length; i++) {
         const text = chars[Math.floor(Math.random() * chars.length)];
-        ctx!.globalAlpha = Math.random() * 0.5 + 0.1;
+        ctx!.globalAlpha = Math.random() * 0.07 + 0.01; // Maximum opacity of 0.07
         ctx!.fillText(text, i * fontSize, drops[i] * fontSize);
 
         if (drops[i] * fontSize > canvas!.height && Math.random() > 0.975) {
@@ -60,8 +60,8 @@ export function MatrixBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none opacity-30"
-      style={{ zIndex: 0 }}
+      className="fixed inset-0 pointer-events-none"
+      style={{ zIndex: -1, opacity: 0.07 }} // Strictly behind all containers with max opacity 0.07
     />
   );
 }
