@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useAuth } from './useAuth';
+import { apiConfig } from '@/lib/api';
 
 export const useAnalyticsExport = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
+  const { session } = useAuth();
 
   const exportCSV = async (hubId: number) => {
-    if (!token) {
+    if (!session?.access_token) {
       setError('Authentication required');
       return;
     }
@@ -16,9 +17,9 @@ export const useAnalyticsExport = () => {
     setError(null);
 
     try {
-      const response = await fetch(`/api/analytics/export/${hubId}`, {
+      const response = await fetch(apiConfig.endpoints.analyticsExport(hubId.toString()), {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
       });
 

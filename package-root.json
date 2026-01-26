@@ -1,0 +1,42 @@
+{
+  "name": "smart-link-hub-monorepo",
+  "version": "1.0.0",
+  "description": "Smart Link Hub - Full Stack Application",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "npm run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "npm run build",
+    "build:backend": "cd backend && npm run build",
+    "start": "cd backend && npm start",
+    "install:all": "npm install && cd backend && npm install",
+    "clean": "rm -rf dist backend/dist node_modules backend/node_modules"
+  },
+  "workspaces": [
+    ".",
+    "backend"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/smart-link-hub.git"
+  },
+  "keywords": [
+    "link-management",
+    "smart-links",
+    "analytics",
+    "qr-codes",
+    "url-shortening"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

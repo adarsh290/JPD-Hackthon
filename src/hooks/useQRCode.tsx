@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from './useAuth';
+import { apiConfig } from '@/lib/api';
 
 interface QRCodeData {
   qrCode: string;
@@ -11,18 +12,18 @@ export const useQRCode = (hubId: number | null) => {
   const [qrData, setQrData] = useState<QRCodeData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
+  const { session } = useAuth();
 
   const generateQR = async () => {
-    if (!hubId || !token) return;
+    if (!hubId || !session?.access_token) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/hubs/${hubId}/qr`, {
+      const response = await fetch(apiConfig.endpoints.qr(hubId), {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
       });
 
