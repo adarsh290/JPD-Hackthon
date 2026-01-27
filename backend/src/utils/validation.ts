@@ -78,12 +78,15 @@ export function validate(schema: z.ZodSchema) {
     try {
       schema.parse(req.body);
       next();
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const message = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+    } catch (error: unknown) {
+        if (error instanceof z.ZodError) {
+        const message = error.errors
+        .map((err: z.ZodIssue) => `${err.path.join('.')}: ${err.message}`)
+        .join(', ');
         return next(new AppError(400, `Validation error: ${message}`));
       }
-      next(error);
+      return next(error);
     }
+
   };
 }
