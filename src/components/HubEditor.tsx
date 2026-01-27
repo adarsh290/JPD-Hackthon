@@ -36,13 +36,24 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
   const { updateHub, deleteHub } = useHubs();
   const { links, createLink, updateLink, deleteLink, reorderLinks } = useHubLinks(hub.id);
   const { clicks, visits } = useHubAnalytics(hub.id);
-  const { qrData, loading: qrLoading, generateQR, downloadQR } = useQRCode(hub.id);
+  const { qrData, loading: qrLoading, error: qrError, generateQR, downloadQR } = useQRCode(hub.id);
   const { exportCSV, loading: exportLoading } = useAnalyticsExport();
   const [editingLink, setEditingLink] = useState<Link | null>(null);
   const [showNewLink, setShowNewLink] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
   const publicUrl = `${window.location.origin}/h/${hub.slug}`;
+
+  const handleGenerateQRClick = async () => {
+    try {
+      await generateQR();
+      setShowQR(true);
+      toast.success('QR code generated successfully!');
+    } catch (error: any) {
+      console.error('QR generation error:', error);
+      toast.error(error?.message || 'Failed to generate QR code. Please try again.');
+    }
+  };
 
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(publicUrl);
@@ -171,18 +182,18 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => {
-                        if (!showQR) {
-                          generateQR();
-                        }
-                        setShowQR(!showQR);
-                      }}
+                      onClick={handleGenerateQRClick}
                       className={showQR ? 'bg-primary/10' : ''}
                       disabled={qrLoading}
                     >
                       <QrCode className="w-4 h-4" />
                     </Button>
                   </div>
+                  {qrError && (
+                    <p className="mt-2 text-xs text-destructive font-mono">
+                      {qrError}
+                    </p>
+                  )}
                 </div>
                 {showQR && qrData && (
                   <motion.div

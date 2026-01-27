@@ -14,8 +14,18 @@ export const useQRCode = (hubId: number | null) => {
   const [error, setError] = useState<string | null>(null);
   const { session } = useAuth();
 
-  const generateQR = async () => {
-    if (!hubId || !session?.access_token) return;
+  const generateQR = async (): Promise<QRCodeData> => {
+    if (!hubId) {
+      const message = 'Invalid hub. Please refresh and try again.';
+      setError(message);
+      throw new Error(message);
+    }
+
+    if (!session?.access_token) {
+      const message = 'Authentication failed. Please log in again.';
+      setError(message);
+      throw new Error(message);
+    }
 
     setLoading(true);
     setError(null);
@@ -28,13 +38,24 @@ export const useQRCode = (hubId: number | null) => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate QR code');
+        let message = `Failed to generate QR code (${response.status})`;
+
+        if (response.status === 401) {
+          message = 'Authentication failed. Please log in again.';
+        } else if (response.status === 404) {
+          message = 'Hub not found.';
+        }
+
+        throw new Error(message);
       }
 
       const result = await response.json();
       setQrData(result.data);
+      return result.data as QRCodeData;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate QR code');
+      const message = err instanceof Error ? err.message : 'Failed to generate QR code';
+      setError(message);
+      throw new Error(message);
     } finally {
       setLoading(false);
     }

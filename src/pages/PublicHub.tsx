@@ -42,7 +42,7 @@ export default function PublicHub() {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
         const fullUrl = `${apiUrl}/api/resolve/${slug}`;
         console.log('📡 Full API URL:', fullUrl);
-        
+
         const response = await fetch(fullUrl, {
           method: 'GET',
           headers: {
@@ -55,11 +55,13 @@ export default function PublicHub() {
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           console.error('❌ API Error:', errorData);
-          
+
           if (response.status === 404) {
-            setError('Hub not found');
+            setError('HUB_NOT_FOUND');
+          } else if (response.status >= 500) {
+            setError('SERVER_ERROR');
           } else {
-            setError(errorData.error?.message || 'Failed to load hub');
+            setError(errorData.error?.message || 'UNKNOWN_ERROR');
           }
           return;
         }
@@ -78,7 +80,7 @@ export default function PublicHub() {
         }
       } catch (err: any) {
         console.error('❌ Network error:', err);
-        setError('Network error - please check your connection');
+        setError('NETWORK_ERROR');
       } finally {
         setLoading(false);
       }
@@ -113,23 +115,82 @@ export default function PublicHub() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <HackerBackground />
-        <Loader2 className="w-8 h-8 text-primary animate-spin relative z-10" />
+        <div className="relative z-10 text-center">
+          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground font-mono">
+            LOADING_HUB<span className="mx-2">::</span>
+            <span className="text-primary">{slug}</span>
+          </p>
+        </div>
       </div>
     );
   }
 
   if (error || !hubData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <HackerBackground />
         <Card variant="terminal" className="max-w-md w-full mx-4 relative z-10">
-          <CardContent className="p-8 text-center">
-            <h1 className="text-2xl font-display mb-2 glow-text">
-              {error === 'Hub not found' ? '404_NOT_FOUND' : 'NO_LINKS_AVAILABLE'}
-            </h1>
-            <p className="text-muted-foreground">
-              {error || 'This hub does not exist or is not active'}
-            </p>
+          <CardContent className="p-8 text-center space-y-4">
+            {error === 'HUB_NOT_FOUND' && (
+              <>
+                <h1 className="text-2xl font-display mb-2 glow-text">404_HUB_NOT_FOUND</h1>
+                <p className="text-muted-foreground">
+                  The hub{' '}
+                  <span className="font-mono font-semibold">"{slug}"</span>{' '}
+                  does not exist or may have been deleted.
+                </p>
+                <a
+                  href="/"
+                  className="inline-block mt-4 text-xs text-primary underline hover:text-primary/80 font-mono"
+                >
+                  &lt; RETURN_TO_DASHBOARD
+                </a>
+              </>
+            )}
+
+            {(error === 'NETWORK_ERROR' || error === 'SERVER_ERROR') && (
+              <>
+                <h1 className="text-2xl font-display mb-2 glow-text">CONNECTION_ERROR</h1>
+                <p className="text-muted-foreground">
+                  Unable to load this hub right now. Please check your connection and try again.
+                </p>
+                <div className="flex items-center justify-center gap-3 mt-4">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 text-xs font-mono border border-primary text-primary rounded hover:bg-primary/10 transition-colors"
+                  >
+                    RETRY
+                  </button>
+                  <a
+                    href="/"
+                    className="text-xs text-muted-foreground hover:text-primary underline font-mono"
+                  >
+                    &lt; GO_BACK
+                  </a>
+                </div>
+              </>
+            )}
+
+            {!['HUB_NOT_FOUND', 'NETWORK_ERROR', 'SERVER_ERROR'].includes(error || '') && (
+              <>
+                <h1 className="text-2xl font-display mb-2 glow-text">ERROR_LOADING_HUB</h1>
+                <p className="text-muted-foreground">
+                  Something went wrong while loading this hub.
+                </p>
+                {error && (
+                  <p className="mt-2 text-xs text-muted-foreground font-mono break-all">
+                    {error}
+                  </p>
+                )}
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 text-xs text-primary underline hover:text-primary/80 font-mono"
+                >
+                  TRY_AGAIN
+                </button>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
