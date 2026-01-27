@@ -80,13 +80,13 @@ export function validate(schema: z.ZodSchema) {
       next();
     } catch (error: unknown) {
         if (error instanceof z.ZodError) {
-        const message = error.errors
+        const message = error.issues
         .map((err: z.ZodIssue) => `${err.path.join('.')}: ${err.message}`)
         .join(', ');
-        return next(new AppError(400, `Validation error: ${message}`));
+        return next(new AppError(400, `Validation error: ${message}`, true));
       }
       return next(error);
+    
     }
-
   };
 }
