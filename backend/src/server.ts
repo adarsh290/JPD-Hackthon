@@ -88,12 +88,11 @@ if (config.nodeEnv === 'production') {
   console.log('📁 Serving static files from root dist:', frontendPath);
   app.use(express.static(frontendPath));
   
-  app.get('*', (req: any, res: any) => {
+  // Handle SPA routing - catch all non-API routes and serve index.html
+  app.use((req: any, res: any, next: any) => {
+    // Skip API routes, short URLs, and health check
     if (req.path.startsWith('/api') || req.path.startsWith('/s') || req.path === '/health') {
-      return res.status(404).json({
-        success: false,
-        error: { message: 'Route not found' },
-      });
+      return next(); // Let it fall through to 404 handler
     }
     
     const indexPath = path.join(frontendPath, 'index.html');
@@ -105,6 +104,14 @@ if (config.nodeEnv === 'production') {
         // This helps you see the wrong path directly in the browser for debugging
         res.status(404).send('Frontend build not found at: ' + indexPath);
       }
+    });
+  });
+  
+  // 404 handler for API routes that weren't handled
+  app.use((req: any, res: any) => {
+    res.status(404).json({
+      success: false,
+      error: { message: 'Route not found' },
     });
   });
 } else {
