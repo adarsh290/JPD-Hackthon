@@ -88,8 +88,8 @@ if (config.nodeEnv === 'production') {
   console.log('📁 Serving static files from root dist:', frontendPath);
   app.use(express.static(frontendPath));
   
-  // SPA fallback - serve index.html for all non-API, non-static routes
-  app.get('*', (req: any, res: any) => {
+  // SPA fallback middleware - must be last before error handler
+  app.use((req: any, res: any) => {
     // Return 404 JSON for API routes that weren't handled
     if (req.path.startsWith('/api') || req.path.startsWith('/s') || req.path === '/health') {
       return res.status(404).json({
