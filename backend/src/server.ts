@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { config } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -14,6 +16,10 @@ import qrRoutes from './routes/qrRoutes.js';
 import shortUrlRoutes from './routes/shortUrlRoutes.js';
 
 const app = express();
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Security middleware
 app.use(helmet());
@@ -72,15 +78,30 @@ app.use('/api', qrRoutes);
 // Short URL routes (no /api prefix)
 app.use('/s', shortUrlRoutes);
 
-// 404 handler
-app.use((_req, res) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      message: 'Route not found',
-    },
+// Serve static files from frontend build (production only)
+// Replace your existing static file block with this corrected version:
+
+if (config.nodeEnv === 'production') {
+  // Correct the path to reach the frontend/dist folder from backend/src
+  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  console.log('📁 Serving static files from:', frontendPath);
+  app.use(express.static(frontendPath));
+  
+  app.get('*', (req, res) => {
+    // Keep your existing API skip logic
+    if (req.path.startsWith('/api') || req.path.startsWith('/s') || req.path === '/health') {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Route not found' },
+      });
+    }
+    
+    const indexPath = path.join(frontendPath, 'index.html');
+    // Log for debugging on Render
+    console.log('🎯 Serving SPA route:', req.path, '→', indexPath);
+    res.sendFile(indexPath);
   });
-});
+}
 
 // Error handler (must be last)
 app.use(errorHandler);
