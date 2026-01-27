@@ -23,7 +23,8 @@ export class QRController {
 
     try {
       // Generate public hub URL
-      const publicUrl = `${config.cors.origin}/hub/${hub.slug}`;
+      // Use the public /h/:slug route that the frontend exposes
+      const publicUrl = `${config.cors.origin}/h/${hub.slug}`;
       
       // Generate QR code as data URL
       const qrDataUrl = await QRCode.toDataURL(publicUrl, {
