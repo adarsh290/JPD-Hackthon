@@ -87,39 +87,39 @@ Deployment:
 ## Getting Started (Local Development)
 
 1. Clone the repository:
-    git clone https://github.com/adarsh290/JPD-Hackthon.git
-    cd JPD-Hackthon
+    `git clone https://github.com/adarsh290/JPD-Hackthon.git`
+    `cd JPD-Hackthon`
 2. Backend setup:
-    cd backend
-    npm install
+    `cd backend`
+    `npm install`
 
 Create `.env`:
-    DATABASE_URL=postgresql://...
-    JWT_SECRET=your_super_secret_key
-    PORT=3000
-    FRONTEND_URL=http://localhost:5173
-    NODE_ENV=development
+    `DATABASE_URL=postgresql://...`
+    `JWT_SECRET=your_super_secret_key`
+    `PORT=3000`
+    `FRONTEND_URL=http://localhost:5173`
+    `NODE_ENV=development`
 
 Run Prisma:
-    npx prisma generate
-    npx prisma migrate dev
+    `npx prisma generate`
+    `npx prisma migrate dev`
 
 Start backend:
-    npm run dev
+    `npm run dev`
 
 3. Frontend setup:
-    cd frontend
-    npm install
+    `cd frontend`
+    `npm install`
 
 Create `.env`:
-    VITE_API_URL=http://localhost:3000
+    `VITE_API_URL=http://localhost:3000`
 
 
 Start frontend:
-    npm run dev
+    `npm run dev`
 
 Frontend runs at:
-    http://localhost:5173
+    `http://localhost:5173`
 
 ---
 
