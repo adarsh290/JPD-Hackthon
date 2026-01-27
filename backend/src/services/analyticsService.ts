@@ -1,7 +1,15 @@
 import prisma from '../config/database.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { Parser } from 'json2csv';
-import { LinkWithAnalytics } from './rulesEngine.js';
+
+// Minimal analytics metrics type to avoid casting issues
+type AnalyticsMetrics = {
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  recentImpressions: number;
+  recentClicks: number;
+};
 
 export interface AnalyticsSummary {
   totalVisits: number;
@@ -287,8 +295,8 @@ export class AnalyticsService {
    * Get link analytics with CTR data for rules engine
    * Uses aggregated data when available for performance
    */
-  async getLinkAnalyticsForRules(hubId: number): Promise<Map<number, LinkWithAnalytics>> {
-    const analyticsMap = new Map<number, LinkWithAnalytics>();
+  async getLinkAnalyticsForRules(hubId: number): Promise<Map<number, AnalyticsMetrics>> {
+    const analyticsMap = new Map<number, AnalyticsMetrics>();
 
     // Try aggregated data first
     const hasAggregatedData = await this.hasRecentAggregatedData(hubId);
@@ -340,7 +348,7 @@ export class AnalyticsService {
           ctr: impressions > 0 ? clicks / impressions : 0,
           recentImpressions,
           recentClicks,
-        } as LinkWithAnalytics);
+        });
       }
     } else {
       // Fallback to raw data approximation
@@ -367,7 +375,7 @@ export class AnalyticsService {
           ctr: impressions > 0 ? clicks / impressions : 0,
           recentImpressions: impressions, // No time decay in fallback mode
           recentClicks: clicks,
-        } as LinkWithAnalytics);
+        });
       }
     }
 

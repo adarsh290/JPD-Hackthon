@@ -10,6 +10,7 @@ export interface AuthRequest extends Request {
     email: string;
     [key: string]: any;
   };
+  userId?: string; // For backward compatibility
 }
 
 export const authenticate = async (

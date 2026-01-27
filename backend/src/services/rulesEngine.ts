@@ -20,6 +20,15 @@ export interface LinkWithAnalytics extends LinkWithRules {
   recentClicks?: number
 }
 
+// Analytics metrics type for performance calculations
+export interface AnalyticsMetrics {
+  impressions: number
+  clicks: number
+  ctr: number
+  recentImpressions: number
+  recentClicks: number
+}
+
 /* ───────────────── NORMALIZATION ───────────────── */
 
 /**
@@ -131,7 +140,7 @@ const PERFORMANCE_CONFIG = {
 export function calculateLinkPriority(
   link: LinkWithRules,
   context: RequestContext,
-  analytics?: LinkWithAnalytics
+  analytics?: AnalyticsMetrics
 ): number {
   let score = link.priorityScore
 
@@ -155,7 +164,7 @@ export function calculateLinkPriority(
 }
 
 function calculatePerformanceBoost(
-  analytics: LinkWithAnalytics
+  analytics: AnalyticsMetrics
 ): number {
   const impressions = analytics.impressions ?? 0
   const clicks = analytics.clicks ?? 0
@@ -173,7 +182,7 @@ function calculatePerformanceBoost(
 export function sortLinksByRules(
   links: LinkWithRules[],
   context: RequestContext,
-  analyticsMap?: Map<number, LinkWithAnalytics>
+  analyticsMap?: Map<number, AnalyticsMetrics>
 ): LinkWithRules[] {
   return links
     .filter(link => shouldShowLink(link, context))
