@@ -9,10 +9,6 @@ export interface RequestContext {
   timestamp: Date;
 }
 
-/**
- * Detect country from IP address using ipapi.co service
- * Handles localhost IPs and API failures gracefully
- */
 async function detectCountry(ipAddress: string | undefined): Promise<string | undefined> {
   if (
     !ipAddress ||
@@ -37,10 +33,8 @@ async function detectCountry(ipAddress: string | undefined): Promise<string | un
 
     if (!response.ok) return 'IN';
 
-    const data = (await response.json()) as { country_code?: string; error?: boolean };
-    if (data.error || !data.country_code) return 'IN';
-
-    return data.country_code.toUpperCase();
+    const data = (await response.json()) as { country_code?: string };
+    return data.country_code?.toUpperCase() ?? 'IN';
   } catch {
     return 'IN';
   }
@@ -49,11 +43,15 @@ async function detectCountry(ipAddress: string | undefined): Promise<string | un
 export async function detectContext(req: Request): Promise<RequestContext> {
   const userAgent = req.headers['user-agent'];
 
-  // ✅ ua-parser-js is a FUNCTION, not a class
-  const parsed = UAParser(userAgent);
+  // 🔥 FORCE SAFE USAGE — ignore broken typings
+  const parser = new (UAParser as any)();
+  if (userAgent) {
+    parser.setUA(userAgent);
+  }
 
-  const device = parsed.device;
-  const os = parsed.os;
+  const result = parser.getResult();
+  const device = result.device;
+  const os = result.os;
 
   let deviceType: 'mobile' | 'desktop' | 'tablet' | 'unknown' = 'unknown';
 
@@ -81,4 +79,3 @@ export async function detectContext(req: Request): Promise<RequestContext> {
     timestamp: new Date(),
   };
 }
-  
