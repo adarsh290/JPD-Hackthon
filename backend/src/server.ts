@@ -82,13 +82,11 @@ app.use('/s', shortUrlRoutes);
 // Replace your existing static file block with this corrected version:
 
 if (config.nodeEnv === 'production') {
-  // Correct the path to reach the frontend/dist folder from backend/src
   const frontendPath = path.join(__dirname, '../../frontend/dist');
   console.log('📁 Serving static files from:', frontendPath);
   app.use(express.static(frontendPath));
   
   app.get('*', (req, res) => {
-    // Keep your existing API skip logic
     if (req.path.startsWith('/api') || req.path.startsWith('/s') || req.path === '/health') {
       return res.status(404).json({
         success: false,
@@ -97,12 +95,12 @@ if (config.nodeEnv === 'production') {
     }
     
     const indexPath = path.join(frontendPath, 'index.html');
-    // Log for debugging on Render
     console.log('🎯 Serving SPA route:', req.path, '→', indexPath);
-    res.sendFile(indexPath);
+    
+    // The 'return' keyword here is what fixes the Build Error you just had
+    return res.sendFile(indexPath);
   });
 }
-
 // Error handler (must be last)
 app.use(errorHandler);
 
@@ -113,3 +111,4 @@ app.listen(PORT, () => {
   console.log(`📊 Environment: ${config.nodeEnv}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 });
+export default app;
