@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import UAParser from 'ua-parser-js';
+import { UAParser } from 'ua-parser-js';
 
 export interface RequestContext {
   deviceType: 'mobile' | 'desktop' | 'tablet' | 'unknown';
@@ -43,13 +43,10 @@ async function detectCountry(ipAddress: string | undefined): Promise<string | un
 export async function detectContext(req: Request): Promise<RequestContext> {
   const userAgent = req.headers['user-agent'];
 
-  // 🔥 FORCE SAFE USAGE — ignore broken typings
-  const parser = new (UAParser as any)();
-  if (userAgent) {
-    parser.setUA(userAgent);
-  }
-
+  // ✅ Correct ESM usage
+  const parser = new UAParser(userAgent);
   const result = parser.getResult();
+
   const device = result.device;
   const os = result.os;
 
