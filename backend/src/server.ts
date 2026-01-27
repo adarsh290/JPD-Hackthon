@@ -88,28 +88,15 @@ if (config.nodeEnv === 'production') {
   console.log('📁 Serving static files from root dist:', frontendPath);
   app.use(express.static(frontendPath));
   
-  // SPA fallback - handle all remaining routes
-  app.use('/', (req: any, res: any, next: any) => {
-    // Skip if it's an API route, short URL, or health check
-    if (req.path.startsWith('/api') || req.path.startsWith('/s') || req.path === '/health') {
-      return next(); // Let it fall through to 404 handler
-    }
-    
-    // Serve index.html for all other routes (SPA routing)
+  // SPA fallback - serve index.html for ALL remaining routes
+  // This must be after all API routes and static files
+  app.use((_req: any, res: any) => {
     const indexPath = path.join(frontendPath, 'index.html');
-    return res.sendFile(indexPath, (err: any) => {
+    res.sendFile(indexPath, (err: any) => {
       if (err) {
         console.error('❌ ERROR: Could not find index.html at:', indexPath);
         res.status(500).send('Frontend build not found at: ' + indexPath);
       }
-    });
-  });
-  
-  // Final 404 handler for unmatched API routes
-  app.use((req: any, res: any) => {
-    res.status(404).json({
-      success: false,
-      error: { message: 'Route not found' },
     });
   });
 } else {
