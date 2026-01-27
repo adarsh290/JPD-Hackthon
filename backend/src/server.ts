@@ -36,7 +36,7 @@ console.log('🔗 CORS allowed origins:', allowedOrigins);
 
 app.use(
   cors({
-    origin: (origin, callback) => {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       // Allow requests with no origin (mobile apps, etc.)
       if (!origin) return callback(null, true);
       
@@ -60,7 +60,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check
-app.get('/health', (_req, res) => {
+app.get('/health', (_req: any, res: any) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -88,7 +88,7 @@ if (config.nodeEnv === 'production') {
   console.log('📁 Serving static files from root dist:', frontendPath);
   app.use(express.static(frontendPath));
   
-  app.get('*', (req, res) => {
+  app.get('*', (req: any, res: any) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/s') || req.path === '/health') {
       return res.status(404).json({
         success: false,
@@ -99,12 +99,22 @@ if (config.nodeEnv === 'production') {
     const indexPath = path.join(frontendPath, 'index.html');
     
     // Use a callback to catch if index.html is actually missing
-    return res.sendFile(indexPath, (err) => {
+    return res.sendFile(indexPath, (err: any) => {
       if (err) {
         console.error('❌ ERROR: Could not find index.html at:', indexPath);
         // This helps you see the wrong path directly in the browser for debugging
         res.status(404).send('Frontend build not found at: ' + indexPath);
       }
+    });
+  });
+} else {
+  // Development: 404 handler for API routes only
+  app.use((_req: any, res: any) => {
+    res.status(404).json({
+      success: false,
+      error: {
+        message: 'Route not found',
+      },
     });
   });
 }
