@@ -35,6 +35,7 @@ model Hub {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   links     Link[]
   analytics Analytics[]
+  dailyAnalytics DailyAnalytics[]
 
   @@index([userId])
   @@index([slug])
@@ -54,6 +55,7 @@ model Link {
   hub       Hub        @relation(fields: [hubId], references: [id], onDelete: Cascade)
   rules     Rule[]
   analytics Analytics[]
+  dailyAnalytics DailyAnalytics[]
 
   @@index([hubId])
   @@map("links")
@@ -88,4 +90,33 @@ model Analytics {
   @@index([hubId])
   @@index([timestamp])
   @@map("analytics")
+}
+
+// Daily aggregated analytics for performance and dashboard queries
+// Reduces expensive real-time aggregations on raw analytics table
+model DailyAnalytics {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @map("date") // Date only (no time component)
+  hubId     Int      @map("hub_id")
+  linkId    Int?     @map("link_id") // null for hub-level aggregates
+  
+  // Aggregated metrics
+  impressions Int @default(0) // Hub visits where link was shown (for links) or total hub visits (for hubs)
+  clicks      Int @default(0) // Link clicks (0 for hub-level records)
+  
+  // Breakdown by dimensions
+  deviceBreakdown Json @default("{}") // {"mobile": 10, "desktop": 5}
+  countryBreakdown Json @default("{}") // {"US": 8, "CA": 7}
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  hub  Hub   @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  link Link? @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@unique([date, hubId, linkId]) // One record per day per hub/link combination
+  @@index([date])
+  @@index([hubId])
+  @@index([linkId])
+  @@map("daily_analytics")
 }

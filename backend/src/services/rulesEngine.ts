@@ -1,193 +1,185 @@
-import { Link, Rule } from '@prisma/client';
-import { RequestContext } from '../utils/contextDetector.js';
+import { Link, Rule } from '@prisma/client'
+import { RequestContext } from '../utils/contextDetector.js'
 
-/** Rule value shapes for type/value model */
-interface TimeValue {
-  start?: string; // HH:mm
-  end?: string;   // HH:mm
-  days?: number[]; // 0–6 (Sunday–Saturday), optional
-}
+/* ───────────────── TYPES ───────────────── */
 
-interface DeviceValue {
-  allowed?: string[];
-  priority?: string;
-}
+type RuleResult = true | false | 'unknown'
 
-interface GeoValue {
-  allowed?: string[];
-  blocked?: string[];
-  priority?: string;
-}
-
-interface PerformanceValue {
-  minClicks?: number;
-  autoSort?: boolean;
+export interface RuleGroup {
+  rules: Rule[]
 }
 
 export interface LinkWithRules extends Link {
-  rules: Rule[];
-  _count?: { analytics: number };
+  rules: Rule[]
 }
 
-/**
- * Validates HH:mm time range (value.start, value.end) against visitor timestamp.
- */
-function isTimeRuleValid(value: TimeValue, timestamp: Date): boolean {
-  if (value.days && value.days.length > 0) {
-    const dayOfWeek = timestamp.getDay();
-    if (!value.days.includes(dayOfWeek)) return false;
-  }
-
-  if (!value.start && !value.end) return true;
-
-  const currentMinutes = timestamp.getHours() * 60 + timestamp.getMinutes();
-
-  if (value.start) {
-    const [h, m] = value.start.split(':').map(Number);
-    if (currentMinutes < h * 60 + m) return false;
-  }
-
-  if (value.end) {
-    const [h, m] = value.end.split(':').map(Number);
-    if (currentMinutes > h * 60 + m) return false;
-  }
-
-  return true;
+export interface LinkWithAnalytics extends LinkWithRules {
+  impressions?: number
+  clicks?: number
+  recentImpressions?: number
+  recentClicks?: number
 }
 
+/* ───────────────── NORMALIZATION ───────────────── */
+
 /**
- * Determines if a link should be shown based on time, device, geo, and performance rules.
- * IMPORTANT: If a link has NO rules, it should ALWAYS be shown (default behavior).
- * If a link has rules, ALL rules must pass for the link to be shown.
+ * Supported formats:
+ * 1) Legacy: Rule[]
+ * 2) New: { groups: RuleGroup[] }
  */
-export function shouldShowLink(link: LinkWithRules, context: RequestContext): boolean {
-  console.log(`🔍 Evaluating link "${link.title}" (ID: ${link.id}):`, {
-    isActive: link.isActive,
-    rulesCount: link.rules?.length || 0,
-    context: {
-      deviceType: context.deviceType,
-      country: context.country,
-      timestamp: context.timestamp.toISOString(),
-    }
-  });
+function normalizeRuleGroups(raw: any): RuleGroup[] {
+  if (!raw) return [{ rules: [] }]
 
-  if (!link.isActive) {
-    console.log(`❌ Link "${link.title}" is inactive`);
-    return false;
+  if (raw.groups && Array.isArray(raw.groups)) {
+    return raw.groups
   }
 
-  // If no rules exist, show the link by default
-  if (!link.rules || link.rules.length === 0) {
-    console.log(`✅ Link "${link.title}" has no rules - showing by default`);
-    return true;
+  if (Array.isArray(raw)) {
+    return [{ rules: raw }]
   }
 
-  // Evaluate each rule - ALL must pass
-  for (const rule of link.rules) {
-    const value = rule.value as Record<string, unknown>;
-    console.log(`🔧 Evaluating rule:`, { type: rule.type, value });
+  return [{ rules: [] }]
+}
 
-    if (rule.type === 'time') {
-      const isValid = isTimeRuleValid(value as TimeValue, context.timestamp);
-      console.log(`⏰ Time rule result: ${isValid}`);
-      if (!isValid) {
-        console.log(`❌ Link "${link.title}" failed time rule`);
-        return false;
-      }
-    }
+/* ───────────────── SINGLE RULE EVALUATION ───────────────── */
 
-    if (rule.type === 'device') {
-      const v = value as DeviceValue;
-      // Only filter if allowed list is specified and not empty
-      if (v.allowed && v.allowed.length > 0) {
-        if (!v.allowed.includes(context.deviceType)) {
-          console.log(`❌ Link "${link.title}" failed device rule: ${context.deviceType} not in allowed [${v.allowed.join(', ')}]`);
-          return false;
-        }
-      }
-      console.log(`✅ Device rule passed: ${context.deviceType}`);
-    }
+function evaluateRule(
+  rule: Rule,
+  context: RequestContext
+): RuleResult {
+  const value = rule.value as any
 
-    if (rule.type === 'geo') {
-      const v = value as GeoValue;
-      
-      // Skip geo filtering if country is undefined/unknown (VPN, localhost, etc.)
+  switch (rule.type) {
+    case 'device':
+      if (!context.deviceType) return 'unknown'
+      return value.allowed?.includes(context.deviceType) ?? true
+
+    case 'geo':
       if (!context.country || context.country === 'unknown') {
-        console.log(`⚠️ Geo rule skipped: country is ${context.country || 'undefined'} - allowing link`);
-        continue; // Skip this rule, don't fail the link
+        return 'unknown'
       }
+      if (value.blocked?.includes(context.country)) return false
+      if (value.allowed) return value.allowed.includes(context.country)
+      return true
 
-      // Check blocked list first
-      if (v.blocked && v.blocked.length > 0 && v.blocked.includes(context.country)) {
-        console.log(`❌ Link "${link.title}" failed geo rule: ${context.country} is blocked`);
-        return false;
+    case 'time': {
+      const now = context.timestamp
+      if (!now) return 'unknown'
+
+      if (value.days && !value.days.includes(now.getDay())) return false
+
+      const minutes = now.getHours() * 60 + now.getMinutes()
+      if (value.start) {
+        const [h, m] = value.start.split(':').map(Number)
+        if (minutes < h * 60 + m) return false
       }
-      
-      // Check allowed list only if it's specified and not empty
-      if (v.allowed && v.allowed.length > 0) {
-        if (!v.allowed.includes(context.country)) {
-          console.log(`❌ Link "${link.title}" failed geo rule: ${context.country} not in allowed [${v.allowed.join(', ')}]`);
-          return false;
-        }
+      if (value.end) {
+        const [h, m] = value.end.split(':').map(Number)
+        if (minutes > h * 60 + m) return false
       }
-      
-      console.log(`✅ Geo rule passed: ${context.country}`);
+      return true
     }
 
-    if (rule.type === 'performance') {
-      const v = value as PerformanceValue;
-      const count = link._count?.analytics ?? 0;
-      // Only check minClicks if it's specified
-      if (v.minClicks != null && v.minClicks > 0 && count < v.minClicks) {
-        console.log(`❌ Link "${link.title}" failed performance rule: ${count} clicks < ${v.minClicks} required`);
-        return false;
-      }
-      console.log(`✅ Performance rule passed: ${count} clicks >= ${v.minClicks || 0} required`);
+    case 'performance':
+      return true // performance NEVER hides links
+
+    default:
+      return 'unknown'
+  }
+}
+
+/* ───────────────── GROUP + LINK EVALUATION ───────────────── */
+
+function evaluateGroup(
+  group: RuleGroup,
+  context: RequestContext
+): boolean {
+  for (const rule of group.rules) {
+    const result = evaluateRule(rule, context)
+
+    if (result === false) return false
+    if (result === 'unknown') return false
+  }
+  return true
+}
+
+export function shouldShowLink(
+  link: LinkWithRules,
+  context: RequestContext
+): boolean {
+  if (!link.isActive) return false
+  if (!link.rules || link.rules.length === 0) return true
+
+  const groups = normalizeRuleGroups(link.rules)
+
+  for (const group of groups) {
+    if (evaluateGroup(group, context)) return true
+  }
+
+  return false
+}
+
+/* ───────────────── PRIORITY CALCULATION ───────────────── */
+
+const PERFORMANCE_CONFIG = {
+  MIN_IMPRESSIONS: 10,
+  CTR_MULTIPLIER: 1000,
+  CLICK_FALLBACK: 2,
+  DECAY_WEIGHT: 0.7
+} as const
+
+export function calculateLinkPriority(
+  link: LinkWithRules,
+  context: RequestContext,
+  analytics?: LinkWithAnalytics
+): number {
+  let score = link.priorityScore
+
+  for (const rule of link.rules ?? []) {
+    const value = rule.value as any
+
+    if (rule.type === 'device' && value.priority === context.deviceType) {
+      score += 100
+    }
+
+    if (rule.type === 'geo' && value.priority === context.country) {
+      score += 50
+    }
+
+    if (rule.type === 'performance' && analytics) {
+      score += calculatePerformanceBoost(analytics)
     }
   }
 
-  console.log(`✅ Link "${link.title}" passed all rules`);
-  return true;
+  return Math.round(score)
 }
 
-/**
- * Computes dynamic priority for ranking. Uses priorityScore and boosts from
- * device/geo priority and performance autoSort (weighting _count.analytics).
- */
-export function calculateLinkPriority(link: LinkWithRules, context: RequestContext): number {
-  let priority = link.priorityScore;
-  if (!link.rules) return priority;
+function calculatePerformanceBoost(
+  analytics: LinkWithAnalytics
+): number {
+  const impressions = analytics.impressions ?? 0
+  const clicks = analytics.clicks ?? 0
 
-  for (const rule of link.rules) {
-    const value = rule.value as Record<string, unknown>;
-
-    if (rule.type === 'device') {
-      const v = value as DeviceValue;
-      if (v.priority === context.deviceType) priority += 100;
-    }
-
-    if (rule.type === 'geo' && context.country) {
-      const v = value as GeoValue;
-      if (v.priority === context.country) priority += 50;
-    }
-
-    if (rule.type === 'performance') {
-      const v = value as PerformanceValue;
-      if (v.autoSort) priority += (link._count?.analytics ?? 0) * 2;
-    }
+  if (impressions >= PERFORMANCE_CONFIG.MIN_IMPRESSIONS) {
+    const ctr = clicks / impressions
+    return ctr * PERFORMANCE_CONFIG.CTR_MULTIPLIER
   }
 
-  return priority;
+  return Math.min(clicks * PERFORMANCE_CONFIG.CLICK_FALLBACK, 100)
 }
 
-/**
- * Filters links by rules and sorts by calculated priority (desc).
- */
+/* ───────────────── FILTER + SORT ───────────────── */
+
 export function sortLinksByRules(
   links: LinkWithRules[],
-  context: RequestContext
+  context: RequestContext,
+  analyticsMap?: Map<number, LinkWithAnalytics>
 ): LinkWithRules[] {
   return links
-    .filter((link) => shouldShowLink(link, context))
-    .sort((a, b) => calculateLinkPriority(b, context) - calculateLinkPriority(a, context));
+    .filter(link => shouldShowLink(link, context))
+    .sort((a, b) => {
+      const pa = calculateLinkPriority(a, context, analyticsMap?.get(a.id))
+      const pb = calculateLinkPriority(b, context, analyticsMap?.get(b.id))
+      return pb - pa
+    })
 }
