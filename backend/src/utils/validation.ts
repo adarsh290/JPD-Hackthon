@@ -26,7 +26,7 @@ const ruleItemSchema = z.object({
 });
 
 export const createLinkSchema = z.object({
-  hubId: z.coerce.number().int().positive('Invalid hub ID'),
+  hubId: z.coerce.number().int().min(1, 'Invalid hub ID'),
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   url: z.string().url('Invalid URL'),
   isActive: z.boolean().optional(),
