@@ -22,8 +22,9 @@ export const updateHubSchema = z.object({
 
 const ruleItemSchema = z.object({
   type: z.enum(['time', 'device', 'geo', 'performance']),
-  value: z.record(z.unknown()),
+  value: z.record(z.string(), z.unknown()),
 });
+
 
 export const createLinkSchema = z.object({
   hubId: z.coerce.number().int().min(1, 'Invalid hub ID'),
