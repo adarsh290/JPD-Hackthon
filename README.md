@@ -1,73 +1,159 @@
-# Welcome to your Lovable project
+# Smart Link Hub
 
-## Project info
+Smart Link Hub is an intelligent link management platform that allows users to create dynamic, rule-based link pages with analytics, redirects, and context-aware behavior.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Unlike basic link-in-bio tools, Smart Link Hub can change which links are shown or prioritized based on time, device, location, and performance — all from a single shareable URL.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+### Authentication
+- Secure user registration and login
+- JWT-based authentication
+- Protected dashboard routes
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Smart Link Hubs
+- Multiple hubs per user
+- Public hub URLs at `/h/:slug`
+- Enable or disable hubs anytime
 
-Changes made via Lovable will be committed automatically to this repo.
+### Rule-Based Link Display
+Links can be shown or prioritized based on:
+- Device (mobile, desktop, tablet)
+- Time (hours, days)
+- Geography (country-based)
+- Performance (click-through rate, clicks)
 
-**Use your preferred IDE**
+### Analytics
+- Hub impressions
+- Link clicks
+- Device and country breakdown
+- Performance-based ranking
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### URL Shortener
+- Short redirect URLs at `/s/:slug`
+- Click tracking before redirect
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Frontend
+- React + TypeScript
+- SPA routing with React Router
+- Responsive, minimal UI
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Architecture Overview
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Frontend (React SPA)
+- Handles `/h/:slug` public pages
+- User dashboard and UI
+- Communicates with backend APIs
 
-# Step 3: Install the necessary dependencies.
-npm i
+Backend (Express)
+- `/api/*` REST APIs
+- `/s/:slug` redirect service
+- `/health` health check
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Database (PostgreSQL via Prisma)
+- Users
+- Hubs
+- Links
+- Rules
+- Analytics
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Tech Stack
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
+Frontend:
 - React
-- shadcn-ui
-- Tailwind CSS
+- TypeScript
+- Vite
+- React Router
 
-## How can I deploy this project?
+Backend:
+- Node.js
+- Express (ESM)
+- Prisma ORM
+- PostgreSQL
+- JWT Authentication
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Deployment:
+- Render (Frontend: Static Site, Backend: Web Service)
+- Managed PostgreSQL
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## Getting Started (Local Development)
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+1. Clone the repository:
+    git clone https://github.com/adarsh290/JPD-Hackthon.git
+    cd JPD-Hackthon
+2. Backend setup:
+    cd backend
+    npm install
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Create `.env`:
+    DATABASE_URL=postgresql://...
+    JWT_SECRET=your_super_secret_key
+    PORT=3000
+    FRONTEND_URL=http://localhost:5173
+    NODE_ENV=development
+
+Run Prisma:
+    npx prisma generate
+    npx prisma migrate dev
+
+Start backend:
+    npm run dev
+
+3. Frontend setup:
+    cd frontend
+    npm install
+
+Create `.env`:
+    VITE_API_URL=http://localhost:3000
+
+
+Start frontend:
+    npm run dev
+
+Frontend runs at:
+    http://localhost:5173
+
+---
+
+## Production Notes
+
+- `/h/:slug` routes are handled by React Router
+- SPA fallback must be enabled on the frontend hosting service
+- Backend only handles `/api/*`, `/s/*`, and `/health`
+
+---
+
+## Testing
+
+- Visit public hubs at `/h/<hub-slug>`
+- View analytics in the dashboard
+- Test short links via `/s/<short-slug>`
+
+---
+
+## Project Status
+
+- Core features implemented
+- Deployed on Render
+- Production-ready architecture
+
+---
+
+## Author
+
+Built by Adarsh Singh  
+Hackathon project focused on clean architecture and real-world deployment.
+
+---
+
+## License
+
+Open for learning and demonstration purposes.
