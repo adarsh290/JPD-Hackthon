@@ -82,8 +82,10 @@ app.use('/s', shortUrlRoutes);
 // Replace your existing static file block with this corrected version:
 
 if (config.nodeEnv === 'production') {
-  const frontendPath = path.join(__dirname, '../../frontend/dist');
-  console.log('📁 Serving static files from:', frontendPath);
+  // Go up from backend/src to backend/, then up to root, then down to dist
+  const frontendPath = path.resolve(__dirname, '../../dist');
+  
+  console.log('📁 Serving static files from root dist:', frontendPath);
   app.use(express.static(frontendPath));
   
   app.get('*', (req, res) => {
@@ -95,10 +97,15 @@ if (config.nodeEnv === 'production') {
     }
     
     const indexPath = path.join(frontendPath, 'index.html');
-    console.log('🎯 Serving SPA route:', req.path, '→', indexPath);
     
-    // The 'return' keyword here is what fixes the Build Error you just had
-    return res.sendFile(indexPath);
+    // Use a callback to catch if index.html is actually missing
+    return res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error('❌ ERROR: Could not find index.html at:', indexPath);
+        // This helps you see the wrong path directly in the browser for debugging
+        res.status(404).send('Frontend build not found at: ' + indexPath);
+      }
+    });
   });
 }
 // Error handler (must be last)
