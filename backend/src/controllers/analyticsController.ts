@@ -1,7 +1,7 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/auth.js';
-import { analyticsService } from '../services/analyticsService.js';
-import { detectContext } from '../utils/contextDetector.js';
+import { AuthRequest } from '../middleware/auth';
+import { analyticsService } from '../services/analyticsService';
+import { detectContext } from '../utils/contextDetector';
 import { Request } from 'express';
 
 export class AnalyticsController {

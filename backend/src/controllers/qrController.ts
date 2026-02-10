@@ -1,9 +1,9 @@
 import { Response } from 'express';
 import QRCode from 'qrcode';
-import { AuthRequest } from '../middleware/auth.js';
-import prisma from '../config/database.js';
-import { AppError } from '../middleware/errorHandler.js';
-import { config } from '../config/env.js';
+import { AuthRequest } from '../middleware/auth';
+import prisma from '../config/database';
+import { AppError } from '../middleware/errorHandler';
+import { config } from '../config/env';
 
 export class QRController {
   async generateHubQR(req: AuthRequest, res: Response): Promise<void> {

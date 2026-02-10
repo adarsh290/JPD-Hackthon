@@ -3,17 +3,17 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { config } from './config/env.js';
-import { errorHandler } from './middleware/errorHandler.js';
+import { config } from './config/env';
+import { errorHandler } from './middleware/errorHandler';
 
 // Routes
-import authRoutes from './routes/authRoutes.js';
-import resolverRoutes from './routes/resolverRoutes.js';
-import linkRoutes from './routes/linkRoutes.js';
-import analyticsRoutes from './routes/analyticsRoutes.js';
-import hubRoutes from './routes/hubRoutes.js';
-import qrRoutes from './routes/qrRoutes.js';
-import shortUrlRoutes from './routes/shortUrlRoutes.js';
+import authRoutes from './routes/authRoutes';
+import resolverRoutes from './routes/resolverRoutes';
+import linkRoutes from './routes/linkRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
+import hubRoutes from './routes/hubRoutes';
+import qrRoutes from './routes/qrRoutes';
+import shortUrlRoutes from './routes/shortUrlRoutes';
 
 const app = express();
 
@@ -36,7 +36,7 @@ console.log('🔗 CORS allowed origins:', allowedOrigins);
 
 app.use(
   cors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, etc.)
       if (!origin) return callback(null, true);
       

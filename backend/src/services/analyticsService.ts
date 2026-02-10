@@ -1,5 +1,5 @@
-import prisma from '../config/database.js';
-import { AppError } from '../middleware/errorHandler.js';
+import prisma from '../config/database';
+import { AppError } from '../middleware/errorHandler';
 import { Parser } from 'json2csv';
 
 // Minimal analytics metrics type to avoid casting issues

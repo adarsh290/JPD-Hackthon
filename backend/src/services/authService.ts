@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from '../config/database.js';
-import { config } from '../config/env.js';
-import { AppError } from '../middleware/errorHandler.js';
+import prisma from '../config/database';
+import { config } from '../config/env';
+import { AppError } from '../middleware/errorHandler';
 
 export interface RegisterData {
   email: string;

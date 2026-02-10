@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { resolverController } from '../controllers/resolverController.js';
-import { resolverLimiter } from '../middleware/rateLimiter.js';
+import { resolverController } from '../controllers/resolverController';
+import { resolverLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 

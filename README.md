@@ -133,6 +133,29 @@ Frontend runs at:
 
 ## Testing
 
+This project utilizes a robust automated testing suite alongside manual verification steps.
+
+### Automated Testing Status
+
+**Backend:**
+- **Frameworks:** Jest for unit and integration testing, and Supertest for API endpoint testing.
+- **Coverage:**
+    - Unit and integration tests are implemented for core services (`authService.ts`, `linkService.ts`, `resolverService.ts`).
+    - API endpoint tests are implemented for key controllers (`authController.ts`, `resolverController.ts`, `hubRoutes.ts`).
+
+**Frontend:**
+- **Frameworks:** Vitest for component testing.
+- **Coverage:**
+    - Component tests are being explored and implemented (e.g., `Button.test.tsx`).
+    - Exploration for End-to-End (E2E) tests is ongoing.
+
+**Areas for Future Enhancement:**
+- Comprehensive E2E testing.
+- Detailed frontend error handling and UX feedback mechanism tests.
+- Performance and security testing.
+
+---
+
 - Visit public hubs at `/h/<hub-slug>`
 - View analytics in the dashboard
 - Test short links via `/s/<short-slug>`

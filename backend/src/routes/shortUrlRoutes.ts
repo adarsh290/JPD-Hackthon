@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { shortUrlController } from '../controllers/shortUrlController.js';
-import { resolverLimiter } from '../middleware/rateLimiter.js';
+import { shortUrlController } from '../controllers/shortUrlController';
+import { resolverLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 

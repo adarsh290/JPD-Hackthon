@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { linkController } from '../controllers/linkController.js';
-import { authenticate } from '../middleware/auth.js';
-import { apiLimiter } from '../middleware/rateLimiter.js';
-import { validate } from '../utils/validation.js';
-import { createLinkSchema, updateLinkSchema } from '../utils/validation.js';
+import { linkController } from '../controllers/linkController';
+import { authenticate } from '../middleware/auth';
+import { apiLimiter } from '../middleware/rateLimiter';
+import { validate } from '../utils/validation';
+import { createLinkSchema, updateLinkSchema } from '../utils/validation';
 
 const router = Router();
 

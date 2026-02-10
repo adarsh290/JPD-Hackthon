@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AppError } from '../middleware/errorHandler.js';
+import { AppError } from '../middleware/errorHandler';
 
 export const registerSchema = z.object({
   email: z.string().email('Invalid email address'),

@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { analyticsController } from '../controllers/analyticsController.js';
-import { authenticate } from '../middleware/auth.js';
-import { apiLimiter, resolverLimiter } from '../middleware/rateLimiter.js';
+import { analyticsController } from '../controllers/analyticsController';
+import { authenticate } from '../middleware/auth';
+import { apiLimiter, resolverLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 

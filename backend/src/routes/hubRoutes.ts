@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { hubController } from '../controllers/hubController.js';
-import { authenticate } from '../middleware/auth.js';
-import { validate } from '../utils/validation.js';
-import { createHubSchema, updateHubSchema } from '../utils/validation.js';
-import { apiLimiter } from '../middleware/rateLimiter.js';
+import { hubController } from '../controllers/hubController';
+import { authenticate } from '../middleware/auth';
+import { validate } from '../utils/validation';
+import { createHubSchema, updateHubSchema } from '../utils/validation';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 

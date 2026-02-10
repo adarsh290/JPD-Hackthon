@@ -1,7 +1,7 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/auth.js';
-import prisma from '../config/database.js';
-import { AppError } from '../middleware/errorHandler.js';
+import { AuthRequest } from '../middleware/auth';
+import prisma from '../config/database';
+import { AppError } from '../middleware/errorHandler';
 
 export class HubController {
   async createHub(req: AuthRequest, res: Response): Promise<void> {

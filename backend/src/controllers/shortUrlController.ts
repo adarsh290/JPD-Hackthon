@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { resolverService } from '../services/resolverService.js';
-import { detectContext } from '../utils/contextDetector.js';
-import { AppError } from '../middleware/errorHandler.js';
+import { resolverService } from '../services/resolverService';
+import { detectContext } from '../utils/contextDetector';
+import { AppError } from '../middleware/errorHandler';
 
 export class ShortUrlController {
   async redirectToHub(req: Request, res: Response): Promise<void> {

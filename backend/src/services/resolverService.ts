@@ -1,7 +1,7 @@
-import prisma from '../config/database.js';
-import { RequestContext } from '../utils/contextDetector.js';
-import { sortLinksByRules, LinkWithRules } from './rulesEngine.js';
-import { AppError } from '../middleware/errorHandler.js';
+import prisma from '../config/database';
+import { RequestContext } from '../utils/contextDetector';
+import { sortLinksByRules, LinkWithRules } from './rulesEngine';
+import { AppError } from '../middleware/errorHandler';
 
 export interface ResolvedLink {
   id: number;

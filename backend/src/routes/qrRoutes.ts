@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { qrController } from '../controllers/qrController.js';
-import { authenticate } from '../middleware/auth.js';
-import { apiLimiter } from '../middleware/rateLimiter.js';
+import { qrController } from '../controllers/qrController';
+import { authenticate } from '../middleware/auth';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 

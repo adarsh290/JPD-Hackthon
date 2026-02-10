@@ -19,7 +19,13 @@
     "noUnusedParameters": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["node"]
+    "baseUrl": "./src",
+    "paths": {
+      "@server": ["server.ts"],
+      "@config/*": ["config/*"],
+      "@middleware/*": ["middleware/*"]
+    },
+    "types": ["node", "jest"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
