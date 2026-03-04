@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RegisterInput, LoginInput } from '@smart-link-hub/shared';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Temporary shim for user session based on standard backend schema
 export interface AuthUser {

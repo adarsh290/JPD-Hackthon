@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { config } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -17,43 +16,11 @@ import shortUrlRoutes from './routes/shortUrlRoutes';
 
 const app = express();
 
-// Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 // Security middleware
 app.use(helmet());
 
-// CORS - Allow multiple origins for development and production
-const allowedOrigins = [
-  config.cors.origin,
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://localhost:5173',
-].filter(Boolean);
-
-console.log('🔗 CORS allowed origins:', allowedOrigins);
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, etc.)
-      if (!origin) return callback(null, true);
-      
-      // Remove trailing slash for comparison
-      const normalizedOrigin = origin.replace(/\/$/, '');
-      const normalizedAllowed = allowedOrigins.map(o => o.replace(/\/$/, ''));
-      
-      if (normalizedAllowed.includes(normalizedOrigin)) {
-        return callback(null, true);
-      }
-      
-      console.warn('❌ CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-  })
-);
+// CORS - Unrestricted for debugging (Sledgehammer mode)
+app.use(cors());
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -79,17 +46,13 @@ app.use('/api', qrRoutes);
 app.use('/s', shortUrlRoutes);
 
 // Serve static files from frontend build (production only)
-// Replace your existing static file block with this corrected version:
-
 if (config.nodeEnv === 'production') {
-  // Go up from backend/src to backend/, then up to root, then down to dist
   const frontendPath = path.resolve(__dirname, '../../dist');
-  
+
   console.log('📁 Serving static files from root dist:', frontendPath);
   app.use(express.static(frontendPath));
-  
+
   // SPA fallback - serve index.html for ALL remaining routes
-  // This must be after all API routes and static files
   app.use((_req: any, res: any) => {
     const indexPath = path.join(frontendPath, 'index.html');
     res.sendFile(indexPath, (err: any) => {
@@ -110,14 +73,16 @@ if (config.nodeEnv === 'production') {
     });
   });
 }
+
 // Error handler (must be last)
 app.use(errorHandler);
 
 // Start server
-const PORT = config.port;
+const PORT = config.port || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${config.nodeEnv}`);
+  console.log(`📊 Environment: ${config.nodeEnv || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 });
+
 export default app;

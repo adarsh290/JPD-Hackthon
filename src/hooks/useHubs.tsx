@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { CreateHubInput, UpdateHubInput, CreateLinkInput, UpdateLinkInput } from '@smart-link-hub/shared';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');

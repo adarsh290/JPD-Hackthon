@@ -38,9 +38,9 @@ export default function PublicHub() {
 
       try {
         console.log('🔍 Fetching hub data for slug:', slug);
-        
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-        const fullUrl = `${apiUrl}/api/resolve/${slug}`;
+
+        const apiUrl = import.meta.env.VITE_API_URL || '/api';
+        const fullUrl = `${apiUrl}/resolve/${slug}`;
         console.log('📡 Full API URL:', fullUrl);
 
         const response = await fetch(fullUrl, {
@@ -92,8 +92,8 @@ export default function PublicHub() {
   const handleLinkClick = async (link: ResolvedLink) => {
     try {
       // Track link click
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      await fetch(`${apiUrl}/api/analytics/click`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
+      await fetch(`${apiUrl}/analytics/click`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

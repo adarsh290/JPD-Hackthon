@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authController } from '../controllers/authController';
 import { validate } from '../utils/validation';
-import { registerSchema, loginSchema } from '../utils/validation';
+import { registerSchema, loginSchema } from '@smart-link-hub/shared';
 import { authLimiter } from '../middleware/rateLimiter';
 
 const router = Router();

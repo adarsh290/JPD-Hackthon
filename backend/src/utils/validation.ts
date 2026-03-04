@@ -3,7 +3,7 @@ import { AppError } from '../middleware/errorHandler';
 
 export * from '@smart-link-hub/shared';
 
-export function validate(schema: z.ZodSchema) {
+export function validate(schema: any) {
   return (req: import('express').Request, _res: import('express').Response, next: import('express').NextFunction) => {
     try {
       schema.parse(req.body);

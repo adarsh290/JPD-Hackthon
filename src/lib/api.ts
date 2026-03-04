@@ -1,12 +1,14 @@
 // API configuration for custom backend endpoints
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// VITE_API_URL is "/api" (includes the /api prefix), used as the base for all API calls.
+// Fallback to empty string so Vite proxy resolves /api/... correctly in development.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const apiConfig = {
   baseUrl: API_BASE_URL,
   endpoints: {
-    qr: (hubId: number) => `${API_BASE_URL}/api/hubs/${hubId}/qr`,
-    analyticsExport: (hubId: string) => `${API_BASE_URL}/api/analytics/export/${hubId}`,
-    shortUrl: (slug: string) => `${API_BASE_URL}/s/${slug}`,
+    qr: (hubId: number) => `${API_BASE_URL}/hubs/${hubId}/qr`,
+    analyticsExport: (hubId: string) => `${API_BASE_URL}/analytics/export/${hubId}`,
+    shortUrl: (slug: string) => `/s/${slug}`,
   },
 };
 

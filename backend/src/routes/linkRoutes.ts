@@ -3,7 +3,7 @@ import { linkController } from '../controllers/linkController';
 import { authenticate } from '../middleware/auth';
 import { apiLimiter } from '../middleware/rateLimiter';
 import { validate } from '../utils/validation';
-import { createLinkSchema, updateLinkSchema } from '../utils/validation';
+import { createLinkSchema, updateLinkSchema } from '@smart-link-hub/shared';
 
 const router = Router();
 

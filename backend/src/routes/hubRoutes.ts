@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { hubController } from '../controllers/hubController';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../utils/validation';
-import { createHubSchema, updateHubSchema } from '../utils/validation';
+import { createHubSchema, updateHubSchema } from '@smart-link-hub/shared';
 import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
