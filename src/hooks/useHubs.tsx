@@ -1,6 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { CreateHubInput, UpdateHubInput, CreateLinkInput, UpdateLinkInput } from '@smart-link-hub/shared';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+};
 
 export interface Hub {
   id: string;
@@ -38,35 +48,24 @@ export function useHubs() {
   const hubsQuery = useQuery({
     queryKey: ['hubs', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('hubs')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as Hub[];
+      const resp = await fetch(`${API_URL}/hubs`, { headers: getAuthHeaders() });
+      if (!resp.ok) throw new Error('Failed to fetch hubs');
+      const json = await resp.json();
+      return json.data as Hub[];
     },
     enabled: !!user,
   });
 
   const createHub = useMutation({
     mutationFn: async ({ name, description }: { name: string; description?: string }) => {
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).substring(2, 8);
-      
-      const { data, error } = await supabase
-        .from('hubs')
-        .insert({
-          user_id: user!.id,
-          name,
-          slug,
-          description,
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data as Hub;
+      const resp = await fetch(`${API_URL}/hubs`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ title: name } as CreateHubInput),
+      });
+      if (!resp.ok) throw new Error('Failed to create hub');
+      const json = await resp.json();
+      return json.data as Hub;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hubs'] });
@@ -75,15 +74,18 @@ export function useHubs() {
 
   const updateHub = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Hub> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('hubs')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data as Hub;
+      // API expects "title", frontend state passed "name" initially but we adapt
+      const payload: any = {};
+      if (updates.name) payload.title = updates.name;
+
+      const resp = await fetch(`${API_URL}/hubs/${id}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) throw new Error('Failed to update hub');
+      const json = await resp.json();
+      return json.data as Hub;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hubs'] });
@@ -92,12 +94,11 @@ export function useHubs() {
 
   const deleteHub = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('hubs')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      const resp = await fetch(`${API_URL}/hubs/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      if (!resp.ok) throw new Error('Failed to delete hub');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hubs'] });
@@ -120,28 +121,24 @@ export function useHubLinks(hubId: string | undefined) {
   const linksQuery = useQuery({
     queryKey: ['links', hubId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('links')
-        .select('*')
-        .eq('hub_id', hubId!)
-        .order('position', { ascending: true });
-      
-      if (error) throw error;
-      return data as Link[];
+      const resp = await fetch(`${API_URL}/hubs/${hubId}/links`, { headers: getAuthHeaders() });
+      if (!resp.ok) throw new Error('Failed to fetch links');
+      const json = await resp.json();
+      return json.data as Link[];
     },
     enabled: !!hubId,
   });
 
   const createLink = useMutation({
-    mutationFn: async (link: Omit<Link, 'id' | 'created_at' | 'updated_at' | 'click_count'>) => {
-      const { data, error } = await supabase
-        .from('links')
-        .insert(link)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data as Link;
+    mutationFn: async (link: any) => {
+      const resp = await fetch(`${API_URL}/links`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ ...link, hubId: parseInt(hubId || '0') }),
+      });
+      if (!resp.ok) throw new Error('Failed to create link');
+      const json = await resp.json();
+      return json.data as Link;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['links', hubId] });
@@ -150,15 +147,14 @@ export function useHubLinks(hubId: string | undefined) {
 
   const updateLink = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Link> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('links')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data as Link;
+      const resp = await fetch(`${API_URL}/links/${id}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updates),
+      });
+      if (!resp.ok) throw new Error('Failed to update link');
+      const json = await resp.json();
+      return json.data as Link;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['links', hubId] });
@@ -167,12 +163,11 @@ export function useHubLinks(hubId: string | undefined) {
 
   const deleteLink = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('links')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      const resp = await fetch(`${API_URL}/links/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      if (!resp.ok) throw new Error('Failed to delete link');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['links', hubId] });
@@ -180,9 +175,15 @@ export function useHubLinks(hubId: string | undefined) {
   });
 
   const reorderLinks = useMutation({
+    // Our Express backend needs an endpoint for this, we could loop or use a batch one if available.
+    // For now we assume a PATCH to /links/reorder exists or will exist or we update them individually.
     mutationFn: async (links: { id: string; position: number }[]) => {
       const promises = links.map(({ id, position }) =>
-        supabase.from('links').update({ position }).eq('id', id)
+        fetch(`${API_URL}/links/${id}`, {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ positionScore: position }),
+        })
       );
       await Promise.all(promises);
     },

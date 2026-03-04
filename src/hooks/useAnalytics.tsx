@@ -1,5 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+};
 
 interface ClickAnalytics {
   id: string;
@@ -20,15 +29,10 @@ export function useHubAnalytics(hubId: string | undefined) {
   const clicksQuery = useQuery({
     queryKey: ['analytics', 'clicks', hubId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('link_clicks')
-        .select('*')
-        .eq('hub_id', hubId!)
-        .order('clicked_at', { ascending: false })
-        .limit(100);
-      
-      if (error) throw error;
-      return data as ClickAnalytics[];
+      const resp = await fetch(`${API_URL}/analytics/hubs/${hubId}/clicks`, { headers: getAuthHeaders() });
+      if (!resp.ok) throw new Error('Failed to fetch clicks');
+      const json = await resp.json();
+      return json.data as ClickAnalytics[];
     },
     enabled: !!hubId,
   });
@@ -36,15 +40,10 @@ export function useHubAnalytics(hubId: string | undefined) {
   const visitsQuery = useQuery({
     queryKey: ['analytics', 'visits', hubId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('hub_visits')
-        .select('*')
-        .eq('hub_id', hubId!)
-        .order('visited_at', { ascending: false })
-        .limit(100);
-      
-      if (error) throw error;
-      return data as VisitAnalytics[];
+      const resp = await fetch(`${API_URL}/analytics/hubs/${hubId}/visits`, { headers: getAuthHeaders() });
+      if (!resp.ok) throw new Error('Failed to fetch visits');
+      const json = await resp.json();
+      return json.data as VisitAnalytics[];
     },
     enabled: !!hubId,
   });
@@ -57,18 +56,17 @@ export function useHubAnalytics(hubId: string | undefined) {
 }
 
 export async function trackHubVisit(hubId: string, deviceType: string) {
-  await supabase.from('hub_visits').insert({
-    hub_id: hubId,
-    device_type: deviceType,
-    user_agent: navigator.userAgent,
+  await fetch(`${API_URL}/analytics/track/visit`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ hubId, deviceType, userAgent: navigator.userAgent })
   });
 }
 
 export async function trackLinkClick(linkId: string, hubId: string, deviceType: string) {
-  await supabase.from('link_clicks').insert({
-    link_id: linkId,
-    hub_id: hubId,
-    device_type: deviceType,
-    user_agent: navigator.userAgent,
+  await fetch(`${API_URL}/analytics/track/click`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ linkId, hubId, deviceType, userAgent: navigator.userAgent })
   });
 }
