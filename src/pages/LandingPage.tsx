@@ -239,7 +239,7 @@ export default function LandingPage() {
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                             <button
-                                onClick={() => navigate('/')}
+                                onClick={() => navigate('/app')}
                                 className="group flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-display font-bold px-6 py-3 rounded-lg transition-all duration-300 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02]"
                             >
                                 Get Started Now
@@ -285,14 +285,14 @@ export default function LandingPage() {
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                             <button
-                                onClick={() => navigate('/')}
+                                onClick={() => navigate('/app')}
                                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-display font-bold px-6 py-2.5 rounded-lg transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40"
                             >
                                 <UserPlus className="w-4 h-4" />
                                 Sign Up Free
                             </button>
                             <button
-                                onClick={() => navigate('/')}
+                                onClick={() => navigate('/app')}
                                 className={cn(
                                     'w-full sm:w-auto flex items-center justify-center gap-2 font-display font-semibold px-5 py-2.5 rounded-lg border transition-all',
                                     dark
@@ -304,7 +304,7 @@ export default function LandingPage() {
                                 Login as User
                             </button>
                             <button
-                                onClick={() => navigate('/')}
+                                onClick={() => navigate('/app')}
                                 className={cn(
                                     'w-full sm:w-auto flex items-center justify-center gap-2 font-display font-semibold px-5 py-2.5 rounded-lg border transition-all',
                                     dark
