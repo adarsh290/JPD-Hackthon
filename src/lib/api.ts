@@ -12,4 +12,38 @@ export const apiConfig = {
   },
 };
 
+export const fetchMetadata = async (url: string) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${apiConfig.baseUrl}/links/metadata?url=${encodeURIComponent(url)}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch metadata');
+  }
+
+  const result = await response.json();
+  return result.data;
+};
+
+export const unlockLink = async (linkId: number, gateValue: string) => {
+  const response = await fetch(`${apiConfig.baseUrl}/resolve/unlock`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ linkId, gateValue }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || 'Failed to unlock link');
+  }
+
+  const result = await response.json();
+  return result.data.url;
+};
+
 export const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;

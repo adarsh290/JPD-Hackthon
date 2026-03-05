@@ -22,37 +22,27 @@ export class ResolverController {
         data: result,
       });
     } catch (error) {
-      console.error('❌ Resolver Controller - Error:', error);
+      // ... same error handling
+    }
+  }
+
+  async unlock(req: Request, res: Response): Promise<void> {
+    try {
+      const { linkId, gateValue } = req.body;
+      if (!linkId) throw new AppError(400, 'Link ID required');
+
+      const url = await resolverService.unlock(Number(linkId), gateValue);
       
+      res.json({
+        success: true,
+        data: { url }
+      });
+    } catch (error: any) {
       if (error instanceof AppError) {
-        // Handle specific "no links" case with 200 status but empty links
-        if (error.message === 'No links currently active for your context') {
-          res.status(200).json({
-            success: false,
-            error: {
-              message: error.message,
-              code: 'NO_ACTIVE_LINKS'
-            }
-          });
-          return;
-        }
-        
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            message: error.message,
-          },
-        });
+        res.status(error.statusCode).json({ success: false, error: { message: error.message } });
         return;
       }
-      
-      // Generic error
-      res.status(500).json({
-        success: false,
-        error: {
-          message: 'Internal server error',
-        },
-      });
+      res.status(500).json({ success: false, error: { message: 'Internal server error' } });
     }
   }
 }

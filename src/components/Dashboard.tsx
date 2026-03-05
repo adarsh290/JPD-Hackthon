@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useHubs } from '@/hooks/useHubs';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { HubCard } from './HubCard';
 import { CreateHubDialog } from './CreateHubDialog';
 import { HubEditor } from './HubEditor';
 import { ThemeToggle } from './ThemeToggle';
-import { Plus, LogOut, Link2, BarChart3, Zap } from 'lucide-react';
+import { Plus, LogOut, Link2, BarChart3, Zap, MousePointerClick, Clock } from 'lucide-react';
 import type { Hub } from '@/hooks/useHubs';
 
 export function Dashboard() {
@@ -21,16 +21,18 @@ export function Dashboard() {
     return <HubEditor hub={selectedHub} onBack={() => setSelectedHub(null)} />;
   }
 
-  const totalVisits = hubs.reduce((acc, hub) => acc + hub.total_visits, 0);
+  const totalVisits = hubs.reduce((acc, hub) => acc + (hub._count?.analytics ?? 0), 0);
+  const totalLinks = hubs.reduce((acc, hub) => acc + (hub._count?.links ?? 0), 0);
+  const activeHubs = hubs.filter(h => h.isActive).length;
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-8"
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4"
         >
           <div>
             <h1 className="text-3xl font-display font-bold glow-text">LINK_HUB_CONTROL</h1>
@@ -47,58 +49,46 @@ export function Dashboard() {
           </div>
         </motion.div>
 
-        {/* Stats */}
+        {/* Stats Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8"
         >
-          <Card variant="stats">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Link2 className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm font-semibold">TOTAL_HUBS</p>
-                <p className="text-2xl font-bold font-mono tabular-nums">{hubs.length}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card variant="stats">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm font-semibold">TOTAL_VISITS</p>
-                <p className="text-2xl font-bold font-mono tabular-nums">{totalVisits}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card variant="stats">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm font-semibold">ACTIVE_HUBS</p>
-                <p className="text-2xl font-bold font-mono tabular-nums">
-                  {hubs.filter(h => h.is_active).length}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {[
+            { icon: Link2, label: 'TOTAL_HUBS', value: hubs.length, color: 'text-primary' },
+            { icon: MousePointerClick, label: 'TOTAL_CLICKS', value: totalVisits, color: 'text-emerald-400' },
+            { icon: BarChart3, label: 'TOTAL_LINKS', value: totalLinks, color: 'text-cyan-400' },
+            { icon: Zap, label: 'ACTIVE_HUBS', value: activeHubs, color: 'text-yellow-400' },
+          ].map((stat, i) => (
+            <Card key={stat.label} variant="stats">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.color}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-muted-foreground text-[10px] sm:text-xs font-semibold tracking-wider">{stat.label}</p>
+                    <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums">{stat.value}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </motion.div>
 
-        {/* Hubs Grid */}
+        {/* Hubs Section */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-display font-semibold">YOUR_HUBS</h2>
+            <div>
+              <h2 className="text-xl font-display font-semibold">YOUR_HUBS</h2>
+              <p className="text-muted-foreground text-xs mt-0.5">{hubs.length} hub{hubs.length !== 1 ? 's' : ''} total</p>
+            </div>
             <Button variant="cyber" onClick={() => setShowCreateDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               CREATE_HUB
@@ -111,7 +101,8 @@ export function Dashboard() {
                 <Card key={i} variant="terminal" className="h-48 animate-pulse">
                   <CardContent className="p-6">
                     <div className="h-4 bg-primary/10 rounded w-3/4 mb-4" />
-                    <div className="h-3 bg-primary/10 rounded w-1/2" />
+                    <div className="h-3 bg-primary/10 rounded w-1/2 mb-3" />
+                    <div className="h-3 bg-primary/10 rounded w-1/3" />
                   </CardContent>
                 </Card>
               ))}
@@ -127,8 +118,8 @@ export function Dashboard() {
                   Create your first Link Hub to get started
                 </p>
                 <div className="flex justify-center">
-                  <Button 
-                    variant="cta" 
+                  <Button
+                    variant="cta"
                     size="cta"
                     onClick={() => setShowCreateDialog(true)}
                     className="shadow-xl"

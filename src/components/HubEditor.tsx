@@ -34,8 +34,8 @@ interface HubEditorProps {
 
 export function HubEditor({ hub, onBack }: HubEditorProps) {
   const { updateHub, deleteHub } = useHubs();
-  const { links, createLink, updateLink, deleteLink, reorderLinks } = useHubLinks(hub.id);
-  const { clicks, visits } = useHubAnalytics(hub.id);
+  const { links, createLink, updateLink, deleteLink, reorderLinks } = useHubLinks(String(hub.id));
+  const { clicks, visits } = useHubAnalytics(String(hub.id));
   const { qrData, loading: qrLoading, error: qrError, generateQR, downloadQR } = useQRCode(hub.id);
   const { exportCSV, loading: exportLoading } = useAnalyticsExport();
   const [editingLink, setEditingLink] = useState<Link | null>(null);
@@ -63,7 +63,7 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
   const handleDeleteHub = async () => {
     if (confirm('Are you sure you want to delete this hub? This action cannot be undone.')) {
       try {
-        await deleteHub.mutateAsync(hub.id);
+        await deleteHub.mutateAsync(String(hub.id));
         toast.success('Hub deleted');
         onBack();
       } catch (error: any) {
@@ -74,8 +74,8 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
 
   const handleToggleActive = async () => {
     try {
-      await updateHub.mutateAsync({ id: hub.id, is_active: !hub.is_active });
-      toast.success(hub.is_active ? 'Hub deactivated' : 'Hub activated');
+      await updateHub.mutateAsync({ id: hub.id, isActive: !hub.isActive } as any);
+      toast.success(hub.isActive ? 'Hub deactivated' : 'Hub activated');
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -96,16 +96,16 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-display font-bold glow-text">{hub.name}</h1>
+            <h1 className="text-2xl font-display font-bold glow-text">{hub.title}</h1>
             <p className="text-sm text-muted-foreground">/{hub.slug}</p>
           </div>
           <div className="flex items-center gap-2">
             <Switch
-              checked={hub.is_active}
+              checked={hub.isActive}
               onCheckedChange={handleToggleActive}
             />
             <span className="text-sm text-muted-foreground">
-              {hub.is_active ? 'ACTIVE' : 'INACTIVE'}
+              {hub.isActive ? 'ACTIVE' : 'INACTIVE'}
             </span>
           </div>
         </motion.div>
@@ -122,7 +122,7 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
               <Eye className="w-5 h-5 text-primary" />
               <div>
                 <p className="text-xs text-muted-foreground">VISITS</p>
-                <p className="text-xl font-bold">{hub.total_visits}</p>
+                <p className="text-xl font-bold">{hub._count?.analytics ?? 0}</p>
               </div>
             </CardContent>
           </Card>
@@ -150,7 +150,7 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
               <div>
                 <p className="text-xs text-muted-foreground">CTR</p>
                 <p className="text-xl font-bold">
-                  {hub.total_visits > 0 ? Math.round((totalClicks / hub.total_visits) * 100) : 0}%
+                  {(hub._count?.analytics ?? 0) > 0 ? Math.round((totalClicks / (hub._count?.analytics ?? 1)) * 100) : 0}%
                 </p>
               </div>
             </CardContent>
@@ -344,7 +344,7 @@ export function HubEditor({ hub, onBack }: HubEditorProps) {
 
         {/* Link Editor Dialog */}
         <LinkEditor
-          hubId={hub.id}
+          hubId={String(hub.id)}
           link={editingLink}
           open={!!editingLink || showNewLink}
           onClose={() => {

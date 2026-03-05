@@ -2,12 +2,14 @@ import prisma from '../config/database';
 import { RequestContext } from '../utils/contextDetector';
 import { sortLinksByRules, LinkWithRules } from './rulesEngine';
 import { AppError } from '../middleware/errorHandler';
+import { emitAnalyticsEvent } from '../config/socket';
 
 export interface ResolvedLink {
   id: number;
   title: string;
   url: string;
   position: number;
+  gateType: string;
 }
 
 export interface ResolverResponse {
@@ -78,7 +80,7 @@ export class ResolverService {
       };
     }
 
-    const sorted = sortLinksByRules(links as LinkWithRules[], context);
+    const sorted = sortLinksByRules(links as any, context);
 
     console.log('🎯 Filtered and sorted links:', {
       filteredCount: sorted.length,
@@ -102,13 +104,38 @@ export class ResolverService {
 
     return {
       hub: { id: hub.id, title: hub.title, slug: hub.slug },
-      links: sorted.map((link) => ({
+      links: sorted.map((link: any) => ({
         id: link.id,
         title: link.title,
         url: link.url,
         position: link.priorityScore,
+        gateType: link.gateType || 'none',
       })),
     };
+  }
+
+  async unlock(linkId: number, gateValue: string): Promise<string> {
+    const link = await prisma.link.findUnique({
+      where: { id: linkId },
+      select: { url: true, gateType: true, gateValue: true },
+    });
+
+    if (!link) {
+      throw new AppError(404, 'Link not found');
+    }
+
+    if (link.gateType === 'none') {
+      return link.url;
+    }
+
+    if (link.gateType === 'password') {
+      if (link.gateValue === gateValue) {
+        return link.url;
+      }
+      throw new AppError(403, 'INCORRECT_PASSWORD');
+    }
+
+    throw new AppError(400, 'UNSUPPORTED_GATE_TYPE');
   }
 
   /**
@@ -116,7 +143,7 @@ export class ResolverService {
    */
   private async trackVisit(hubId: number, context: RequestContext): Promise<void> {
     try {
-      await prisma.analytics.create({
+      const analytics = await prisma.analytics.create({
         data: {
           hubId,
           linkId: null,
@@ -124,6 +151,15 @@ export class ResolverService {
           country: context.country ?? 'unknown',
         },
       });
+
+      // Emit real-time event
+      emitAnalyticsEvent(hubId, 'new-visit', {
+        id: analytics.id,
+        hubId,
+        device_type: analytics.device,
+        visited_at: analytics.timestamp,
+      });
+
       console.log('📈 Analytics visit tracked:', { hubId, device: context.deviceType, country: context.country });
     } catch (err) {
       console.error('❌ Analytics trackVisit error:', err);

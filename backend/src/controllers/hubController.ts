@@ -6,16 +6,16 @@ import { AppError } from '../middleware/errorHandler';
 export class HubController {
   async createHub(req: AuthRequest, res: Response): Promise<void> {
     const { title } = req.body as { title: string };
-    
+
     // Generate unique slug
     const baseSlug = title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
-    
+
     let slug = baseSlug;
     let counter = 1;
-    
+
     // Ensure slug is unique
     while (await prisma.hub.findUnique({ where: { slug } })) {
       slug = `${baseSlug}-${Math.random().toString(36).substring(2, 8)}`;
@@ -40,6 +40,11 @@ export class HubController {
     const hubs = await prisma.hub.findMany({
       where: { userId: req.user!.id },
       orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { links: true, analytics: true },
+        },
+      },
     });
 
     res.json({
@@ -53,7 +58,7 @@ export class HubController {
     if (Number.isNaN(id)) {
       throw new AppError(400, 'Invalid hub ID');
     }
-    
+
     const hub = await prisma.hub.findFirst({
       where: {
         id,
@@ -76,7 +81,7 @@ export class HubController {
     if (Number.isNaN(id)) {
       throw new AppError(400, 'Invalid hub ID');
     }
-    
+
     const hub = await prisma.hub.findFirst({
       where: {
         id,
@@ -104,7 +109,7 @@ export class HubController {
     if (Number.isNaN(id)) {
       throw new AppError(400, 'Invalid hub ID');
     }
-    
+
     const hub = await prisma.hub.findFirst({
       where: {
         id,

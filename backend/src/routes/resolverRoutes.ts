@@ -10,4 +10,10 @@ router.get(
   resolverController.resolve.bind(resolverController)
 );
 
+router.post(
+  '/unlock',
+  resolverLimiter,
+  resolverController.unlock.bind(resolverController)
+);
+
 export default router;

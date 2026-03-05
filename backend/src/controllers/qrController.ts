@@ -23,19 +23,20 @@ export class QRController {
 
     try {
       // Generate public hub URL
-      // Use the public /h/:slug route that the frontend exposes
       const publicUrl = `${config.cors.origin}/h/${hub.slug}`;
       
+      const { darkColor, lightColor } = req.query as { darkColor?: string; lightColor?: string };
+
       // Generate QR code as data URL
       const qrDataUrl = await QRCode.toDataURL(publicUrl, {
-        errorCorrectionLevel: 'M',
+        errorCorrectionLevel: 'H', // Higher error correction for branding
         type: 'image/png',
         margin: 1,
         color: {
-          dark: '#000000',
-          light: '#FFFFFF',
+          dark: darkColor || '#00FF00', // Default Hacker Green
+          light: lightColor || '#000000', // Default Black
         },
-        width: 256,
+        width: 512, // Higher resolution
       });
 
       res.json({

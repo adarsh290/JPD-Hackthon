@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { HackerBackground } from '@/components/HackerBackground';
-import { ExternalLink, Loader2 } from 'lucide-react';
+import { ExternalLink, Loader2, Lock, BatteryLow, WifiOff, ShieldAlert } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { unlockLink } from '@/lib/api';
 
 interface ResolvedLink {
   id: number;
   title: string;
   url: string;
   position: number;
+  gateType: string;
 }
 
 interface ResolverResponse {
@@ -22,105 +27,125 @@ export default function PublicHub() {
   const [hubData, setHubData] = useState<ResolverResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Extreme Context States
+  const [isLowPowerMode, setIsLowPowerMode] = useState(false);
+  const [isSlowNetwork, setIsSlowNetwork] = useState(false);
+  
+  // Gated Link States
+  const [lockedLink, setLockedLink] = useState<ResolvedLink | null>(null);
+  const [password, setPassword] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
 
-  console.log('🔍 SLUG_DETECTED:', slug);
-  console.log('📍 Current URL:', window.location.href);
-  console.log('🌐 API URL:', import.meta.env.VITE_API_URL);
+  // Detect Extreme Context
+  useEffect(() => {
+    // 1. Battery API
+    if ('getBattery' in navigator) {
+      (navigator as any).getBattery().then((battery: any) => {
+        const checkBattery = () => {
+          if (battery.level <= 0.15 && !battery.charging) {
+            setIsLowPowerMode(true);
+            toast('Low Battery Detected: Switching to Power Saver Mode', {
+              icon: <BatteryLow className="w-4 h-4 text-yellow-500" />,
+            });
+          } else {
+            setIsLowPowerMode(false);
+          }
+        };
+        checkBattery();
+        battery.addEventListener('levelchange', checkBattery);
+        battery.addEventListener('chargingchange', checkBattery);
+      });
+    }
+
+    // 2. Network Information API
+    if ('connection' in navigator) {
+      const conn = (navigator as any).connection;
+      const checkConnection = () => {
+        if (conn.saveData || conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g') {
+          setIsSlowNetwork(true);
+          toast('Slow Network Detected: Optimization Active', {
+            icon: <WifiOff className="w-4 h-4 text-yellow-500" />,
+          });
+        } else {
+          setIsSlowNetwork(false);
+        }
+      };
+      checkConnection();
+      conn.addEventListener('change', checkConnection);
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchHub() {
       if (!slug) {
-        console.error('❌ No slug provided');
         setError('No hub slug provided');
         setLoading(false);
         return;
       }
 
       try {
-        console.log('🔍 Fetching hub data for slug:', slug);
-
         const apiUrl = import.meta.env.VITE_API_URL || '/api';
-        const fullUrl = `${apiUrl}/resolve/${slug}`;
-        console.log('📡 Full API URL:', fullUrl);
-
-        const response = await fetch(fullUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        console.log('📡 API Response status:', response.status);
+        const response = await fetch(`${apiUrl}/resolve/${slug}`);
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('❌ API Error:', errorData);
-
-          if (response.status === 404) {
-            setError('HUB_NOT_FOUND');
-          } else if (response.status >= 500) {
-            setError('SERVER_ERROR');
-          } else {
-            setError(errorData.error?.message || 'UNKNOWN_ERROR');
-          }
+          if (response.status === 404) setError('HUB_NOT_FOUND');
+          else setError('SERVER_ERROR');
           return;
         }
 
         const result = await response.json();
-        console.log('✅ Hub data received:', result);
-
-        if (result.success && result.data) {
-          setHubData(result.data);
-          // If no links, set a friendly message but don't treat as error
-          if (result.data.links.length === 0) {
-            console.log('⚠️ Hub has no active links for current context');
-          }
-        } else {
-          setError('Invalid response format');
-        }
-      } catch (err: any) {
-        console.error('❌ Network error:', err);
+        if (result.success) setHubData(result.data);
+        else setError('Invalid response');
+      } catch (err) {
         setError('NETWORK_ERROR');
       } finally {
         setLoading(false);
       }
     }
-
     fetchHub();
   }, [slug]);
 
   const handleLinkClick = async (link: ResolvedLink) => {
-    try {
-      // Track link click
-      const apiUrl = import.meta.env.VITE_API_URL || '/api';
-      await fetch(`${apiUrl}/analytics/click`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          linkId: link.id,
-          hubId: hubData?.hub.id,
-        }),
-      }).catch(err => console.warn('Analytics tracking failed:', err));
-    } catch (err) {
-      console.warn('Failed to track click:', err);
+    if (link.gateType === 'password') {
+      setLockedLink(link);
+      return;
     }
 
-    // Open link
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
+      fetch(`${apiUrl}/analytics/click`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linkId: link.id, hubId: hubData?.hub.id }),
+      }).catch(() => {});
+    } catch (err) {}
+
     window.open(link.url, '_blank');
+  };
+
+  const handleUnlock = async () => {
+    if (!lockedLink) return;
+    setUnlocking(true);
+    try {
+      const url = await unlockLink(lockedLink.id, password);
+      window.open(url, '_blank');
+      setLockedLink(null);
+      setPassword('');
+    } catch (err: any) {
+      toast.error('Incorrect Password');
+    } finally {
+      setUnlocking(false);
+    }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <HackerBackground />
+        {!isLowPowerMode && <HackerBackground />}
         <div className="relative z-10 text-center">
           <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground font-mono">
-            LOADING_HUB<span className="mx-2">::</span>
-            <span className="text-primary">{slug}</span>
-          </p>
+          <p className="text-sm text-muted-foreground font-mono">LOADING_HUB</p>
         </div>
       </div>
     );
@@ -128,69 +153,13 @@ export default function PublicHub() {
 
   if (error || !hubData) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <HackerBackground />
-        <Card variant="terminal" className="max-w-md w-full mx-4 relative z-10">
+      <div className="min-h-screen flex items-center justify-center px-4 bg-black">
+        {!isLowPowerMode && <HackerBackground />}
+        <Card variant="terminal" className="max-w-md w-full relative z-10">
           <CardContent className="p-8 text-center space-y-4">
-            {error === 'HUB_NOT_FOUND' && (
-              <>
-                <h1 className="text-2xl font-display mb-2 glow-text">404_HUB_NOT_FOUND</h1>
-                <p className="text-muted-foreground">
-                  The hub{' '}
-                  <span className="font-mono font-semibold">"{slug}"</span>{' '}
-                  does not exist or may have been deleted.
-                </p>
-                <a
-                  href="/"
-                  className="inline-block mt-4 text-xs text-primary underline hover:text-primary/80 font-mono"
-                >
-                  &lt; RETURN_TO_DASHBOARD
-                </a>
-              </>
-            )}
-
-            {(error === 'NETWORK_ERROR' || error === 'SERVER_ERROR') && (
-              <>
-                <h1 className="text-2xl font-display mb-2 glow-text">CONNECTION_ERROR</h1>
-                <p className="text-muted-foreground">
-                  Unable to load this hub right now. Please check your connection and try again.
-                </p>
-                <div className="flex items-center justify-center gap-3 mt-4">
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="px-4 py-2 text-xs font-mono border border-primary text-primary rounded hover:bg-primary/10 transition-colors"
-                  >
-                    RETRY
-                  </button>
-                  <a
-                    href="/"
-                    className="text-xs text-muted-foreground hover:text-primary underline font-mono"
-                  >
-                    &lt; GO_BACK
-                  </a>
-                </div>
-              </>
-            )}
-
-            {!['HUB_NOT_FOUND', 'NETWORK_ERROR', 'SERVER_ERROR'].includes(error || '') && (
-              <>
-                <h1 className="text-2xl font-display mb-2 glow-text">ERROR_LOADING_HUB</h1>
-                <p className="text-muted-foreground">
-                  Something went wrong while loading this hub.
-                </p>
-                {error && (
-                  <p className="mt-2 text-xs text-muted-foreground font-mono break-all">
-                    {error}
-                  </p>
-                )}
-                <button
-                  onClick={() => window.location.reload()}
-                  className="mt-4 text-xs text-primary underline hover:text-primary/80 font-mono"
-                >
-                  TRY_AGAIN
-                </button>
-              </>
-            )}
+            <h1 className="text-2xl font-display glow-text">ERROR_DETECTED</h1>
+            <p className="text-muted-foreground">{error}</p>
+            <Button onClick={() => window.location.reload()} variant="outline">RETRY</Button>
           </CardContent>
         </Card>
       </div>
@@ -198,15 +167,26 @@ export default function PublicHub() {
   }
 
   return (
-    <div className="min-h-screen py-12 px-4">
-      <HackerBackground />
+    <div className={`min-h-screen py-12 px-4 transition-colors duration-1000 ${isLowPowerMode ? 'bg-[#050505]' : ''}`}>
+      {!isLowPowerMode && <HackerBackground />}
+      
       <div className="max-w-md mx-auto relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <h1 className="text-3xl font-display font-bold glow-text mb-2">
+        {/* Context Status Indicators */}
+        <div className="flex justify-center gap-4 mb-6">
+          {isLowPowerMode && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-1 text-[10px] text-yellow-500 font-mono">
+              <BatteryLow className="w-3 h-3" /> POWER_SAVER_ACTIVE
+            </motion.div>
+          )}
+          {isSlowNetwork && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-1 text-[10px] text-yellow-500 font-mono">
+              <WifiOff className="w-3 h-3" /> DATA_SAVER_ACTIVE
+            </motion.div>
+          )}
+        </div>
+
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
+          <h1 className={`text-3xl font-display font-bold mb-2 ${isLowPowerMode ? 'text-primary' : 'glow-text'}`}>
             {hubData.hub.title}
           </h1>
         </motion.div>
@@ -215,23 +195,20 @@ export default function PublicHub() {
           {hubData.links.map((link, index) => (
             <motion.div
               key={link.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={isLowPowerMode ? { opacity: 1 } : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             >
-              <button
-                onClick={() => handleLinkClick(link)}
-                className="w-full group"
-              >
-                <Card
-                  variant="terminal"
-                  className="hover-glow transition-all cursor-pointer group-hover:scale-[1.02]"
-                >
+              <button onClick={() => handleLinkClick(link)} className="w-full group">
+                <Card variant="terminal" className={`${!isLowPowerMode && 'hover-glow group-hover:scale-[1.02]'} transition-all cursor-pointer`}>
                   <CardContent className="p-4 flex items-center justify-between">
-                    <span className="font-medium group-hover:glow-text transition-all">
-                      {link.title}
-                    </span>
-                    <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <div className="flex items-center gap-3">
+                      {link.gateType !== 'none' && <Lock className="w-4 h-4 text-primary/60" />}
+                      <span className="font-medium group-hover:text-primary transition-all">
+                        {link.title}
+                      </span>
+                    </div>
+                    {!isSlowNetwork && <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary" />}
                   </CardContent>
                 </Card>
               </button>
@@ -239,25 +216,44 @@ export default function PublicHub() {
           ))}
         </div>
 
-        {hubData.links.length === 0 && (
-          <Card variant="terminal" className="text-center py-8">
-            <CardContent>
-              <p className="text-muted-foreground">No links currently active for your context</p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Password Modal */}
+        <AnimatePresence>
+          {lockedLink && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
+                <Card variant="terminal" className="max-w-sm w-full border-primary shadow-[0_0_30px_rgba(0,255,0,0.2)]">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex items-center gap-2 text-primary">
+                      <ShieldAlert className="w-5 h-5" />
+                      <h2 className="font-display font-bold">LINK_LOCKED</h2>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono">
+                      This link requires a decryption key to access.
+                    </p>
+                    <Input
+                      type="password"
+                      placeholder="ENTER_KEY"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-black border-primary/30"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1" onClick={() => setLockedLink(null)}>CANCEL</Button>
+                      <Button variant="cyber" className="flex-1" onClick={handleUnlock} disabled={unlocking}>
+                        {unlocking ? 'DECRYPTING...' : 'UNLOCK'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-12 text-center"
-        >
-          <a
-            href="/"
-            className="text-xs text-muted-foreground hover:text-primary transition-colors"
-          >
-            Powered by LINK_HUB
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mt-12 text-center">
+          <a href="/" className="text-[10px] text-muted-foreground hover:text-primary font-mono tracking-widest transition-colors">
+            {isLowPowerMode ? 'POWERED BY LINK_HUB' : '> POWERED_BY_LINK_HUB <'}
           </a>
         </motion.div>
       </div>

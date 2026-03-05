@@ -12,6 +12,8 @@ router.use(apiLimiter);
 
 router.get('/hub/:hubId', linkController.getLinks.bind(linkController));
 
+router.get('/metadata', linkController.fetchMetadata.bind(linkController));
+
 router.post('/', validate(createLinkSchema), linkController.createLink.bind(linkController));
 
 router.patch('/:id', validate(updateLinkSchema), linkController.updateLink.bind(linkController));

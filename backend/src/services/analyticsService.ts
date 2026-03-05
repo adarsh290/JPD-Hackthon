@@ -1,6 +1,7 @@
 import prisma from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { Parser } from 'json2csv';
+import { emitAnalyticsEvent } from '../config/socket';
 
 // Minimal analytics metrics type to avoid casting issues
 type AnalyticsMetrics = {
@@ -390,13 +391,26 @@ export class AnalyticsService {
       throw new AppError(400, 'Invalid link or hub ID');
     }
 
-    await prisma.analytics.create({
+    const analytics = await prisma.analytics.create({
       data: {
         linkId: linkIdNum,
         hubId: hubIdNum,
         device: data.deviceType,
         country: data.country || 'unknown',
       },
+      include: {
+        link: { select: { title: true } }
+      }
+    });
+
+    // Emit real-time event
+    emitAnalyticsEvent(hubIdNum, 'new-click', {
+      id: analytics.id,
+      linkId: analytics.linkId,
+      linkTitle: analytics.link?.title || 'Unknown',
+      clicked_at: analytics.timestamp,
+      device_type: analytics.device,
+      country: analytics.country,
     });
   }
 

@@ -50,6 +50,8 @@ model Link {
   title         String
   isActive      Boolean  @default(true) @map("is_active")
   priorityScore Int      @default(0) @map("priority_score")
+  gateType      String   @default("none") @map("gate_type") // 'none', 'password', 'captcha'
+  gateValue     String?  @map("gate_value") // secret password or captcha config
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

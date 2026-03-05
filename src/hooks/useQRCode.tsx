@@ -14,7 +14,7 @@ export const useQRCode = (hubId: number | null) => {
   const [error, setError] = useState<string | null>(null);
   const { session } = useAuth();
 
-  const generateQR = async (): Promise<QRCodeData> => {
+  const generateQR = async (darkColor = '#00FF00', lightColor = '#000000'): Promise<QRCodeData> => {
     if (!hubId) {
       const message = 'Invalid hub. Please refresh and try again.';
       setError(message);
@@ -31,7 +31,8 @@ export const useQRCode = (hubId: number | null) => {
     setError(null);
 
     try {
-      const response = await fetch(apiConfig.endpoints.qr(hubId), {
+      const query = new URLSearchParams({ darkColor, lightColor }).toString();
+      const response = await fetch(`${apiConfig.endpoints.qr(hubId)}?${query}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },

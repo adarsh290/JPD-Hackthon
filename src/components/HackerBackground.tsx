@@ -46,6 +46,8 @@ export function HackerBackground() {
   }, [columnWidth]);
 
   // Animation loop - theme-aware but doesn't reset on theme change
+  const scanlineRef = useRef(0);
+  
   const animate = useCallback((currentTime: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -55,6 +57,15 @@ export function HackerBackground() {
 
     // Clear canvas completely each frame
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw CRT Scanline
+    scanlineRef.current = (scanlineRef.current + 2) % canvas.height;
+    ctx.beginPath();
+    ctx.moveTo(0, scanlineRef.current);
+    ctx.lineTo(canvas.width, scanlineRef.current);
+    ctx.strokeStyle = theme === 'dark' ? 'rgba(0, 255, 0, 0.05)' : 'rgba(0, 102, 0, 0.1)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
 
     // Set font properties
     ctx.font = `bold ${fontSize}px monospace`;

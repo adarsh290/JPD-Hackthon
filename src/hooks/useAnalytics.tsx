@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRealtimeAnalytics } from './useRealtimeAnalytics';
+import { useEffect } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
-
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
@@ -11,7 +12,7 @@ const getAuthHeaders = () => {
   };
 };
 
-interface ClickAnalytics {
+export interface ClickAnalytics {
   id: string;
   link_id: string;
   hub_id: string;
@@ -19,7 +20,7 @@ interface ClickAnalytics {
   clicked_at: string;
 }
 
-interface VisitAnalytics {
+export interface VisitAnalytics {
   id: string;
   hub_id: string;
   device_type: string | null;
@@ -27,6 +28,10 @@ interface VisitAnalytics {
 }
 
 export function useHubAnalytics(hubId: string | undefined) {
+  const queryClient = useQueryClient();
+  const hubIdNum = hubId ? Number(hubId) : null;
+  const socket = useRealtimeAnalytics(hubIdNum);
+
   const clicksQuery = useQuery({
     queryKey: ['analytics', 'clicks', hubId],
     queryFn: async () => {
@@ -48,6 +53,33 @@ export function useHubAnalytics(hubId: string | undefined) {
     },
     enabled: !!hubId,
   });
+
+  // Real-time listeners
+  useEffect(() => {
+    if (!socket || !hubId) return;
+
+    const handleNewVisit = (visit: VisitAnalytics) => {
+      queryClient.setQueryData(['analytics', 'visits', hubId], (old: VisitAnalytics[] | undefined) => {
+        if (!old) return [visit];
+        return [visit, ...old].slice(0, 100);
+      });
+    };
+
+    const handleNewClick = (click: ClickAnalytics) => {
+      queryClient.setQueryData(['analytics', 'clicks', hubId], (old: ClickAnalytics[] | undefined) => {
+        if (!old) return [click];
+        return [click, ...old].slice(0, 100);
+      });
+    };
+
+    socket.on('new-visit', handleNewVisit);
+    socket.on('new-click', handleNewClick);
+
+    return () => {
+      socket.off('new-visit', handleNewVisit);
+      socket.off('new-click', handleNewClick);
+    };
+  }, [socket, hubId, queryClient]);
 
   return {
     clicks: clicksQuery.data ?? [],

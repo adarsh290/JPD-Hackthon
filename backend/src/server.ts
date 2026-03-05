@@ -2,8 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
+import { createServer } from 'http';
 import { config } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
+import { initSocket } from './config/socket';
 
 // Routes
 import authRoutes from './routes/authRoutes';
@@ -13,8 +15,13 @@ import analyticsRoutes from './routes/analyticsRoutes';
 import hubRoutes from './routes/hubRoutes';
 import qrRoutes from './routes/qrRoutes';
 import shortUrlRoutes from './routes/shortUrlRoutes';
+import { getPublicStats } from './controllers/statsController';
 
 const app = express();
+const httpServer = createServer(app);
+
+// Initialize Socket.io
+initSocket(httpServer);
 
 // Security middleware
 app.use(helmet());
@@ -40,6 +47,7 @@ app.use('/api/resolve', resolverRoutes);
 app.use('/api/links', linkRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/hubs', hubRoutes);
+app.get('/api/stats', getPublicStats); // Public — must be before qrRoutes (which uses auth middleware on all /api/*)
 app.use('/api', qrRoutes);
 
 // Short URL routes (no /api prefix)
@@ -79,7 +87,7 @@ app.use(errorHandler);
 
 // Start server
 const PORT = config.port || 3000;
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${config.nodeEnv || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);

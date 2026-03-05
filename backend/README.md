@@ -1,308 +1,150 @@
-# Smart Link Hub - Backend API
+# SmartLinkHub — Backend API
 
-Production-ready Node.js/Express backend with PostgreSQL for the Smart Link Hub application.
+Express + Prisma + PostgreSQL backend for the SmartLinkHub platform.
 
 ## Features
 
-- ✅ **JWT Authentication** - Secure user registration and login
-- ✅ **Link Hub Management** - Create and manage link hubs with unique slugs
-- ✅ **Smart Link Resolver** - Context-aware link filtering and sorting
-- ✅ **Rule Engine** - Time-based, device-based, geo-based, and performance-based rules
-- ✅ **Analytics** - Comprehensive click tracking and analytics
-- ✅ **Rate Limiting** - Protection against abuse
-- ✅ **Input Validation** - Zod-based validation
-- ✅ **Modular Architecture** - Clean separation of concerns
+- ✅ **JWT Authentication** — bcrypt password hashing, token-based sessions
+- ✅ **Link Hub CRUD** — Create, manage, and delete link hubs with unique slugs
+- ✅ **Smart Resolver** — Context-aware link filtering and sorting per visitor
+- ✅ **Rule Engine** — Time, device, geo, and performance-based rules
+- ✅ **Pulse Analytics** — Click/visit tracking with daily aggregation
+- ✅ **Public Stats** — Live platform metrics for the landing page
+- ✅ **Branded QR Codes** — Customizable colors, downloadable PNGs
+- ✅ **Short URLs** — `/s/:code` redirects
+- ✅ **Gated Links** — Password-protected link access
+- ✅ **Real-Time** — Socket.io event broadcasting for live dashboards
+- ✅ **CSV Export** — Download analytics as CSV
+- ✅ **Rate Limiting** — Per-endpoint protection
+- ✅ **Input Validation** — Zod schemas (shared with frontend)
 
 ## Tech Stack
 
-- **Runtime**: Node.js (ES Modules)
-- **Framework**: Express.js
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: JWT (jsonwebtoken)
-- **Validation**: Zod
-- **Security**: Helmet, CORS, bcryptjs
+| Component | Technology |
+|-----------|-----------|
+| Runtime | Node.js 18+ |
+| Framework | Express.js |
+| Database | PostgreSQL 14+ with Prisma ORM |
+| Auth | JWT (jsonwebtoken) + bcryptjs |
+| Real-Time | Socket.io |
+| Validation | Zod (via `@smart-link-hub/shared`) |
+| Security | Helmet, CORS, rate limiting |
 
-## Prerequisites
+## Setup
 
-- Node.js 18+ 
-- PostgreSQL 14+
-- npm or yarn
+```bash
+cd backend
+npm install
+cp .env.example .env   # Edit with your PostgreSQL credentials
+npx prisma generate
+npx prisma migrate dev --name init
+npm run dev             # Starts on http://localhost:3000
+```
 
-## Installation
+## Environment Variables
 
-1. **Clone and navigate to backend directory**
-   ```bash
-   cd backend
-   ```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | — | PostgreSQL connection string |
+| `JWT_SECRET` | — | Secret key (32+ chars in production) |
+| `JWT_EXPIRES_IN` | `7d` | Token expiration |
+| `PORT` | `3000` | Server port |
+| `NODE_ENV` | `development` | Environment mode |
+| `FRONTEND_URL` | `http://localhost:8081` | CORS origin |
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+## API Routes
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and configure:
-   ```env
-   DATABASE_URL="postgresql://user:password@localhost:5432/smartlinkhub?schema=public"
-   JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-   JWT_EXPIRES_IN="7d"
-   PORT=3000
-   NODE_ENV=development
-   CORS_ORIGIN="http://localhost:5173"
-   ```
+### Authentication (Public)
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/api/auth/register` | Register user `{ email, password, displayName? }` |
+| `POST` | `/api/auth/login` | Login → `{ user, token }` |
 
-4. **Set up database**
-   ```bash
-   # Generate Prisma Client
-   npm run prisma:generate
-   
-   # Run migrations
-   npm run prisma:migrate
-   ```
+### Hubs (Auth Required)
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/hubs` | List user's hubs (includes `_count` for links/analytics) |
+| `GET` | `/api/hubs/:id` | Get single hub |
+| `POST` | `/api/hubs` | Create hub `{ title }` |
+| `PATCH` | `/api/hubs/:id` | Update hub `{ title? }` |
+| `DELETE` | `/api/hubs/:id` | Delete hub and all links |
 
-5. **Start development server**
-   ```bash
-   npm run dev
-   ```
-
-   The server will start on `http://localhost:3000`
-
-## API Endpoints
-
-### Authentication
-
-- `POST /api/auth/register` - Register new user
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "password123",
-    "displayName": "John Doe"
-  }
-  ```
-
-- `POST /api/auth/login` - Login user
-  ```json
-  {
-    "email": "user@example.com",
-    "password": "password123"
-  }
-  ```
-
-### Link Hubs
-
-- `GET /api/hubs` - Get all user's hubs (Auth required)
-- `GET /api/hubs/:id` - Get single hub (Auth required)
-- `POST /api/hubs` - Create hub (Auth required)
-- `PATCH /api/hubs/:id` - Update hub (Auth required)
-- `DELETE /api/hubs/:id` - Delete hub (Auth required)
-
-### Links
-
-- `GET /api/links/hub/:hubId` - Get all links for a hub (Auth required)
-- `POST /api/links` - Create link (Auth required)
-- `PATCH /api/links/:id` - Update link (Auth required)
-- `DELETE /api/links/:id` - Delete link (Auth required)
-- `POST /api/links/hub/:hubId/reorder` - Reorder links (Auth required)
-- `PUT /api/links/:linkId/rule` - Update link rules (Auth required)
-
-### Resolver (Public)
-
-- `GET /api/resolve/:slug` - Resolve hub and get optimized links
-  - Automatically detects device type, IP, user agent
-  - Applies rules and returns sorted links
+### Links (Auth Required)
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/hubs/:hubId/links` | Get links for a hub |
+| `POST` | `/api/links` | Create link |
+| `PATCH` | `/api/links/:id` | Update link |
+| `DELETE` | `/api/links/:id` | Delete link |
 
 ### Analytics
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| `GET` | `/api/analytics/hub/:hubId` | ✅ | Hub analytics summary |
+| `GET` | `/api/analytics/export/:hubId` | ✅ | Export as CSV |
+| `POST` | `/api/analytics/click/:hubId/:linkId` | ❌ | Track click (rate-limited) |
+| `POST` | `/api/analytics/click` | ❌ | Simple click tracking |
 
-- `GET /api/analytics/hub/:hubId` - Get hub analytics (Auth required)
-  - Returns: total visits, total clicks, top/least performing links, clicks by device/country, recent clicks
-
-- `POST /api/analytics/click/:hubId/:linkId` - Track link click (Public, rate limited)
-
-## Rules Engine
-
-The resolver uses a sophisticated rules engine to filter and sort links:
-
-### Time-based Rules
-```json
-{
-  "timeRules": {
-    "start": "09:00",
-    "end": "17:00",
-    "timezone": "UTC",
-    "days": [1, 2, 3, 4, 5] // Monday-Friday
-  }
-}
-```
-
-### Device-based Rules
-```json
-{
-  "deviceRules": {
-    "allowed": ["mobile", "desktop"],
-    "priority": "mobile"
-  }
-}
-```
-
-### Geo-based Rules
-```json
-{
-  "geoRules": {
-    "allowed": ["US", "CA"],
-    "blocked": ["XX"],
-    "priority": "US"
-  }
-}
-```
-
-### Performance-based Rules
-```json
-{
-  "performanceRules": {
-    "minClicks": 10,
-    "maxClicks": 1000,
-    "priority": "high",
-    "autoSort": true
-  }
-}
-```
+### Public Endpoints
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/resolve/:slug` | Resolve hub → context-sorted links |
+| `GET` | `/api/stats` | Live platform stats (landing page) |
+| `GET` | `/api/hubs/:id/qr` | Generate branded QR code |
+| `GET` | `/s/:shortCode` | Short URL redirect |
+| `GET` | `/health` | Health check |
 
 ## Database Schema
 
-- **users** - User accounts with JWT authentication
-- **link_hubs** - Link hubs with unique slugs
-- **links** - Links associated with hubs
-- **rules** - JSON-based rules for links (time, device, geo, performance)
-- **link_clicks** - Analytics for link clicks
-- **hub_visits** - Analytics for hub visits
+```
+users        →  id(uuid), email, password_hash, display_name
+hubs         →  id(int), user_id, slug, title, is_active
+links        →  id(int), hub_id, url, title, gate_type, gate_value, priority_score
+rules        →  id(int), link_id, type, value(json)
+analytics    →  id(int), link_id?, hub_id?, device, country, timestamp
+daily_analytics → id(int), date, hub_id, link_id?, impressions, clicks, device/country breakdowns
+```
 
 ## Project Structure
 
 ```
 backend/
 ├── src/
-│   ├── config/          # Configuration (database, env)
-│   ├── controllers/     # Request handlers
-│   ├── middleware/      # Express middleware (auth, error handling, rate limiting)
-│   ├── routes/          # API routes
-│   ├── services/        # Business logic
-│   ├── utils/           # Utility functions (validation, context detection)
-│   └── server.ts         # Express app entry point
+│   ├── config/          # env.ts, database.ts, socket.ts
+│   ├── controllers/     # auth, hub, link, analytics, stats, resolver, qr, shortUrl
+│   ├── middleware/      # auth.ts, errorHandler.ts, rateLimiter.ts
+│   ├── routes/          # Route definitions per resource
+│   ├── services/        # Business logic (analytics, auth, link, resolver)
+│   ├── utils/           # contextDetector.ts, validation
+│   └── server.ts        # Express app entry point
 ├── prisma/
-│   └── schema.prisma    # Database schema
-├── .env.example         # Environment variables template
+│   └── schema.prisma    # PostgreSQL Prisma schema
+├── scripts/             # Utility scripts
+├── .env.example         # Environment template
 └── package.json
 ```
 
-## Development
+## Development Commands
 
 ```bash
-# Run in development mode (with hot reload)
-npm run dev
-
-# Build for production
-npm run build
-
-# Run production build
-npm start
-
-# Open Prisma Studio (database GUI)
-npm run prisma:studio
+npm run dev             # Start with hot reload (tsx)
+npm run build           # Compile TypeScript
+npm start               # Run compiled output
+npm test                # Run Jest tests
+npm run prisma:generate # Regenerate Prisma client
+npm run prisma:migrate  # Run database migrations
+npm run prisma:studio   # Open Prisma Studio GUI
 ```
 
-## Production Deployment
+## Security
 
-### Environment Variables
-
-Ensure all production environment variables are set:
-- `DATABASE_URL` - PostgreSQL connection string
-- `JWT_SECRET` - Strong secret key (use crypto.randomBytes)
-- `NODE_ENV=production`
-- `CORS_ORIGIN` - Your frontend URL
-
-### Build and Deploy
-
-1. **Build the application**
-   ```bash
-   npm run build
-   ```
-
-2. **Run database migrations**
-   ```bash
-   npm run prisma:migrate deploy
-   ```
-
-3. **Start the server**
-   ```bash
-   npm start
-   ```
-
-### Recommended Production Setup
-
-- Use a process manager (PM2, systemd)
-- Set up reverse proxy (Nginx)
-- Enable HTTPS
-- Configure database connection pooling
-- Set up monitoring and logging
-- Use environment-specific configuration
-
-### Docker Deployment (Optional)
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-## Security Features
-
-- ✅ JWT-based authentication
-- ✅ Password hashing with bcrypt
-- ✅ Rate limiting on all endpoints
-- ✅ Input validation with Zod
-- ✅ Helmet.js for security headers
-- ✅ CORS configuration
-- ✅ SQL injection protection (Prisma)
-- ✅ Error handling without exposing internals
-
-## Rate Limits
-
-- **General API**: 100 requests per 15 minutes
-- **Auth endpoints**: 5 requests per 15 minutes
-- **Resolver endpoint**: 60 requests per minute
-
-## Error Handling
-
-All errors follow a consistent format:
-```json
-{
-  "success": false,
-  "error": {
-    "message": "Error message"
-  }
-}
-```
-
-## Testing
-
-```bash
-# Run tests (when implemented)
-npm test
-```
+- JWT auth with bcrypt password hashing
+- Rate limiting: 5 req/15min (auth), 100/15min (API), 60/min (resolver)
+- Helmet.js security headers
+- Zod input validation
+- Prisma SQL injection protection
+- Error responses never expose internals
 
 ## License
 
 MIT
-
-## Support
-
-For issues and questions, please open an issue in the repository.

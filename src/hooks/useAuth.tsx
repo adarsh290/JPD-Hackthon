@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { RegisterInput, LoginInput } from '@smart-link-hub/shared';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -10,7 +10,18 @@ export interface AuthUser {
   displayName?: string | null;
 }
 
-export function useAuth() {
+interface AuthContextType {
+  user: AuthUser | null;
+  session: { access_token: string } | null;
+  loading: boolean;
+  signUp: (email: string, password: string, displayName?: string) => Promise<{ data: any; error: any }>;
+  signIn: (email: string, password: string) => Promise<{ data: any; error: any }>;
+  signOut: () => Promise<{ error: null }>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<{ access_token: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,12 +101,17 @@ export function useAuth() {
     return { error: null };
   };
 
-  return {
-    user,
-    session,
-    loading,
-    signUp,
-    signIn,
-    signOut,
-  };
+  return (
+    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

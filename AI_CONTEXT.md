@@ -7,30 +7,31 @@
 
 ## 🏗️ Project Structure (Monorepo)
 
-This is an **npm Workspaces Monorepo**. The root `package.json` defines all workspaces.
+**npm Workspaces Monorepo** — root `package.json` defines all workspaces.
 
 ```
 JPD-Hackthon/
 ├── src/                        ← React Frontend (Vite + TypeScript + Tailwind)
+│   ├── pages/                  ← Index, LandingPage, PublicHub, NotFound
+│   ├── components/             ← Dashboard, HubEditor, AuthForm, HubCard, HackerBackground...
+│   ├── hooks/                  ← useAuth, useHubs, useAnalytics, useQRCode, useRealtimeAnalytics
+│   └── contexts/               ← ThemeContext (dark/light mode)
 ├── backend/                    ← Express API (Node.js + Prisma + PostgreSQL)
 │   ├── src/
-│   │   ├── config/             ← env.ts (Zod-validated), database.ts (PrismaClient)
-│   │   ├── controllers/        ← authController, hubController, linkController...
-│   │   ├── services/           ← Business logic (authService, hubService...)
-│   │   ├── routes/             ← authRoutes, hubRoutes, linkRoutes, analyticsRoutes...
+│   │   ├── config/             ← env.ts, database.ts, socket.ts
+│   │   ├── controllers/        ← auth, hub, link, analytics, stats, resolver, qr, shortUrl
+│   │   ├── services/           ← analyticsService, authService, resolverService, linkService
+│   │   ├── routes/             ← authRoutes, hubRoutes, linkRoutes, analyticsRoutes, resolverRoutes, qrRoutes, shortUrlRoutes
 │   │   ├── middleware/         ← errorHandler.ts, rateLimiter.ts, auth.ts
-│   │   └── server.ts           ← Express app entrypoint
-│   ├── prisma/
-│   │   └── schema.prisma       ← PostgreSQL Prisma schema
-│   ├── .env                    ← Backend secrets (PORT, DATABASE_URL, JWT_SECRET...)
-│   └── package.json
-├── packages/
-│   └── shared/                 ← Shared Zod schemas + TypeScript types
-│       ├── src/index.ts        ← Source of truth for all data shapes
-│       └── dist/               ← ⚠️ MUST be built before backend starts (run: npx tsc)
-├── .env                        ← Frontend env (VITE_API_URL="/api")
-├── vite.config.ts              ← Vite frontend config with /api proxy
-└── package.json                ← Root workspace config
+│   │   └── server.ts          ← Express app entrypoint
+│   ├── prisma/schema.prisma   ← PostgreSQL data model
+│   └── .env                   ← Backend secrets (PORT, DATABASE_URL, JWT_SECRET...)
+├── packages/shared/            ← Shared Zod schemas + TypeScript types
+│   ├── src/index.ts           ← Source of truth for all data shapes
+│   └── dist/                  ← ⚠️ MUST be built before backend starts (npx tsc)
+├── .env                       ← Frontend env (VITE_API_URL="/api")
+├── vite.config.ts             ← Vite config + /api proxy → localhost:3000
+└── package.json               ← Root workspace config
 ```
 
 ---
@@ -39,62 +40,64 @@ JPD-Hackthon/
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite, TypeScript, Tailwind CSS, Shadcn UI, React Query |
-| Backend | Node.js, Express 5, TypeScript, Prisma ORM |
+| Frontend | React 18, Vite, TypeScript, Tailwind CSS, Shadcn UI, Framer Motion, TanStack Query |
+| Backend | Node.js, Express, TypeScript, Socket.io, Prisma ORM |
 | Database | PostgreSQL |
 | Validation | Zod (shared between frontend + backend via `packages/shared`) |
 | Auth | Custom JWT — stored in browser `localStorage`, passed as `Authorization: Bearer <token>` |
 | Package Manager | **npm** (not bun, not pnpm) |
 
-> ⚠️ **Supabase has been completely removed.** Do NOT reinstall `@supabase/supabase-js` or any Supabase client code. All auth flows use the custom Express JWT API.
+> ⚠️ **Supabase has been completely removed.** Do NOT reinstall `@supabase/supabase-js`.
 
 ---
 
 ## 🔌 How the Frontend Talks to the Backend
 
-**Vite Proxy** (`vite.config.ts`) is configured to forward all `/api/*` and `/health` requests from the Vite dev server (`localhost:8080`) to the Express backend (`localhost:3000`). This means:
+**Vite Proxy** (`vite.config.ts`) forwards `/api/*` and `/health` from the Vite dev server to Express (`localhost:3000`).
 
-- The browser never makes a cross-origin request in development.
-- CORS is effectively bypassed during local dev.
-- The frontend uses `VITE_API_URL="/api"` (relative, not absolute).
-
-**In production**, the Express server serves the built frontend `dist/` as static files, so it's one server.
-
-```typescript
-// Frontend fetch example:
-const API_URL = import.meta.env.VITE_API_URL || '/api';
-fetch(`${API_URL}/auth/login`, { method: 'POST', ... })
-```
-
-### API Routes
-| Route | Description |
-|---|---|
-| `POST /api/auth/register` | Create a new user account |
-| `POST /api/auth/login` | Login and receive a JWT token |
-| `GET /api/hubs` | Get hubs for the authenticated user |
-| `POST /api/hubs` | Create a hub |
-| `GET /api/links` | Get links inside a hub |
-| `POST /api/links` | Create a link |
-| `GET /api/analytics/:hubId` | Get analytics for a hub |
-| `GET /health` | Simple health check endpoint |
+- Browser never makes cross-origin requests in development
+- Frontend uses `VITE_API_URL="/api"` (relative, not absolute)
+- In production, Express serves the built `dist/` as static files
 
 ### Auth Flow
 1. User registers/logs in → backend returns `{ data: { user, token } }`
-2. Frontend stores `token` and `user` in `localStorage`
-3. Subsequent requests include header: `Authorization: Bearer <token>`
+2. Frontend `AuthProvider` stores `token` and `user` in `localStorage` and React Context
+3. All components share auth state via `useAuth()` hook (Context-based, not per-instance)
+4. Subsequent requests include `Authorization: Bearer <token>` header
+
+### API Routes
+
+| Route | Auth | Description |
+|---|---|---|
+| `POST /api/auth/register` | ❌ | Create account |
+| `POST /api/auth/login` | ❌ | Login → JWT |
+| `GET /api/hubs` | ✅ | User's hubs (with `_count.links`, `_count.analytics`) |
+| `POST /api/hubs` | ✅ | Create hub |
+| `PATCH /api/hubs/:id` | ✅ | Update hub |
+| `DELETE /api/hubs/:id` | ✅ | Delete hub |
+| `GET /api/hubs/:id/links` | ✅ | Hub links |
+| `POST /api/links` | ✅ | Create link |
+| `GET /api/analytics/hub/:hubId` | ✅ | Analytics summary |
+| `GET /api/analytics/export/:hubId` | ✅ | CSV export |
+| `GET /api/stats` | ❌ | Public platform stats (landing page) |
+| `GET /api/resolve/:slug` | ❌ | Resolve hub → context-sorted links |
+| `POST /api/analytics/click` | ❌ | Track click (rate-limited) |
+| `GET /api/hubs/:id/qr` | ✅ | QR code generation |
+| `GET /s/:shortCode` | ❌ | Short URL redirect |
+| `GET /health` | ❌ | Health check |
 
 ---
 
 ## 🗄️ Database Models (Prisma + PostgreSQL)
 
-Schema lives in `backend/prisma/schema.prisma`.
+Schema: `backend/prisma/schema.prisma`
 
-- **User**: `id (uuid)`, `email (unique)`, `password_hash`, `displayName`
+- **User**: `id (uuid)`, `email (unique)`, `passwordHash`, `displayName`
 - **Hub**: `id (int)`, `userId`, `slug (unique)`, `title`, `isActive`
-- **Link**: `id (int)`, `hubId`, `url`, `title`, `isActive`, `priorityScore`
-- **Rule**: `id (int)`, `linkId`, `type`, `value (Json)` — for geo/time/device routing rules
-- **Analytics**: Raw click events (device, country, timestamp)
-- **DailyAnalytics**: Pre-aggregated daily metrics per hub/link
+- **Link**: `id (int)`, `hubId`, `url`, `title`, `isActive`, `priorityScore`, `gateType`, `gateValue`
+- **Rule**: `id (int)`, `linkId`, `type` (time/device/geo/performance), `value (Json)`
+- **Analytics**: Raw events — `linkId?`, `hubId?`, `device`, `country`, `timestamp`
+- **DailyAnalytics**: Pre-aggregated metrics — `impressions`, `clicks`, `deviceBreakdown`, `countryBreakdown`
 
 ---
 
@@ -105,7 +108,7 @@ Schema lives in `backend/prisma/schema.prisma`.
 DATABASE_URL="postgresql://user:password@localhost:5432/smart_link_hub"
 JWT_SECRET="your-secret-at-least-32-characters"
 PORT=3000
-FRONTEND_URL="http://localhost:8080"
+FRONTEND_URL="http://localhost:8081"
 NODE_ENV="development"
 JWT_EXPIRES_IN="7d"
 ```
@@ -114,85 +117,66 @@ JWT_EXPIRES_IN="7d"
 ```env
 VITE_API_URL="/api"
 ```
-> ⚠️ `VITE_API_URL` must be a **relative path** (`/api`), NOT an absolute URL, because the Vite proxy handles forwarding.
+> ⚠️ `VITE_API_URL` must be a **relative path**, NOT absolute.
 
 ---
 
-## 🚀 How to Start Locally (EXACT STEPS)
-
-**Prerequisites:** PostgreSQL running locally, `backend/.env` configured.
+## 🚀 How to Start Locally
 
 ```bash
-# 1. Install all workspace dependencies from the root
+# 1. Install all workspace dependencies
 npm install
 
-# 2. Build the shared Zod schemas package (REQUIRED before backend starts)
+# 2. Build shared schemas (REQUIRED before backend starts)
 cd packages/shared && npx tsc && cd ../..
 
-# 3. Generate the Prisma database client (REQUIRED)
+# 3. Generate Prisma client (REQUIRED)
 cd backend && npx prisma generate && cd ..
 
-# 4. Run database migrations (first time only)
+# 4. Run database migrations (first time)
 cd backend && npx prisma migrate dev && cd ..
 
-# 5. Start the backend (in one terminal)
+# 5. Start backend (Terminal 1)
 cd backend && npm run dev
-# ✅ Should see: 🚀 Server running on port 3000
+# ✅ Server running on port 3000
 
-# 6. Start the frontend (in another terminal from project root)
+# 6. Start frontend (Terminal 2 from root)
 npm run dev
-# ✅ Should see: Vite running on http://localhost:8080
+# ✅ Vite running on http://localhost:8081
 ```
-
-> 🌐 Open `http://localhost:8080` in your browser. The frontend is on port **8080**, not 5173.
 
 ---
 
-## ⚠️ Critical Known Quirks & Gotchas
+## ⚠️ Known Quirks
 
-### 1. The Monorepo Prisma Problem
-The npm workspace hoists `@prisma/client` to the root `node_modules`, but `prisma generate` writes the compiled client to `backend/node_modules/.prisma/client`. This causes a mismatch.
+1. **Monorepo Prisma**: `backend/src/config/database.ts` imports from `../../node_modules/.prisma/client`. Run `npx prisma generate` inside `backend/` if you see "did not initialize" errors.
 
-**The fix already applied:** `backend/src/config/database.ts` imports directly from the local generated path:
-```typescript
-import { PrismaClient } from '../../node_modules/.prisma/client';
-```
-If you ever see `"@prisma/client did not initialize yet"`, run `npx prisma generate` inside the `backend/` directory.
+2. **Shared package must be built first**: Run `npx tsc` in `packages/shared/` before starting backend.
 
-### 2. The Shared Package Must Be Built First
-The backend imports `@smart-link-hub/shared`. The `tsconfig.json` paths alias resolves it to `packages/shared/dist/index.js`. If `dist/` doesn't exist, the backend will throw `Cannot find module`.
+3. **Backend is CommonJS**: Uses `"module": "CommonJS"` in tsconfig. Never switch to ESM.
 
-**Fix:** Always run `npx tsc` in `packages/shared/` before starting the backend.
+4. **Rate limiter skipped in dev**: All rate limiters use `skip: () => isDev`.
 
-### 3. Backend is CommonJS (NOT ES Modules)
-The backend uses `"module": "CommonJS"` in `backend/tsconfig.json` and has NO `"type": "module"` in `backend/package.json`. This is intentional to support `ts-node`/`tsx` and workspace symlink resolution.
+5. **`/api/stats` must be registered before `qrRoutes`**: The QR routes use `router.use(authenticate)` which catches all `/api/*` requests. Public routes must be registered first in `server.ts`.
 
-**Never switch it to ESM** — it breaks workspace imports and `__dirname`.
-
-### 4. Rate Limiter is Disabled in Development
-`backend/src/middleware/rateLimiter.ts` uses `skip: () => isDev` for all rate limiters. This is intentional. In production, auth is limited to 5 requests per 15 min.
-
-### 5. CORS in Development
-CORS is currently set to `app.use(cors())` (allow all). This is acceptable because the Vite proxy means the browser never makes cross-origin requests anyway. If you want to restore strict CORS for production, use `config.cors.origin` from `backend/src/config/env.ts`.
-
-### 6. Windows + npx Quirk
-On Windows, `npx` sometimes hangs with an interactive "install?" prompt in certain shells. If a command like `npx prisma generate` appears to hang with no output, Ctrl+C and use `npm run prisma:generate` instead (which runs the local `prisma` binary directly).
+6. **Hub fields are camelCase**: Backend returns Prisma fields (`title`, `isActive`, `createdAt`), NOT snake_case. Frontend `Hub` interface matches this.
 
 ---
 
-## 📁 Key Files Quick Reference
+## 📁 Key Files
 
 | File | Purpose |
 |---|---|
 | `backend/src/server.ts` | Express app: middleware, routes, error handler |
-| `backend/src/config/env.ts` | Zod-validated environment variable config |
-| `backend/src/config/database.ts` | PrismaClient singleton |
-| `backend/src/middleware/rateLimiter.ts` | Rate limiting (dev-skipped) |
-| `backend/src/middleware/errorHandler.ts` | Global error handler (`AppError` class) |
+| `backend/src/config/socket.ts` | Socket.io initialization + event helpers |
+| `backend/src/controllers/statsController.ts` | Public `/api/stats` endpoint |
+| `backend/src/services/rulesEngine.ts` | Context-aware link routing logic |
 | `backend/prisma/schema.prisma` | Full PostgreSQL data model |
 | `packages/shared/src/index.ts` | All Zod schemas + TypeScript types |
-| `src/hooks/useAuth.tsx` | Frontend login/register/session logic |
-| `src/hooks/useHubs.tsx` | Frontend hub CRUD operations |
-| `vite.config.ts` | Vite + `/api` proxy config |
-| `.env` | Frontend env (`VITE_API_URL="/api"`) |
-| `backend/.env` | Backend secrets |
+| `src/hooks/useAuth.tsx` | Auth Context provider + useAuth hook |
+| `src/hooks/useHubs.tsx` | Hub CRUD (TanStack Query) |
+| `src/pages/PublicHub.tsx` | Public adaptive hub page |
+| `src/pages/LandingPage.tsx` | Marketing page with live stats |
+| `src/components/HackerBackground.tsx` | Matrix rain canvas animation |
+| `src/contexts/ThemeContext.tsx` | Dark/light theme with CSS variables |
+| `vite.config.ts` | Vite + /api proxy config |

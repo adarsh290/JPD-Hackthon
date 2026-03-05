@@ -14,15 +14,17 @@ const getAuthHeaders = () => {
 };
 
 export interface Hub {
-  id: string;
-  user_id: string;
-  name: string;
+  id: number;
+  userId: string;
+  title: string;
   slug: string;
-  description: string | null;
-  is_active: boolean;
-  total_visits: number;
-  created_at: string;
-  updated_at: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    links: number;
+    analytics: number;
+  };
 }
 
 export interface Link {
@@ -52,7 +54,7 @@ export function useHubs() {
       const resp = await fetch(`${API_URL}/hubs`, { headers: getAuthHeaders() });
       if (!resp.ok) throw new Error('Failed to fetch hubs');
       const json = await resp.json();
-      return json.data as Hub[];
+      return (json.data ?? []) as Hub[];
     },
     enabled: !!user,
   });
@@ -74,10 +76,9 @@ export function useHubs() {
   });
 
   const updateHub = useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Hub> & { id: string }) => {
-      // API expects "title", frontend state passed "name" initially but we adapt
+    mutationFn: async ({ id, ...updates }: Partial<Hub> & { id: number }) => {
       const payload: any = {};
-      if (updates.name) payload.title = updates.name;
+      if (updates.title) payload.title = updates.title;
 
       const resp = await fetch(`${API_URL}/hubs/${id}`, {
         method: 'PATCH',

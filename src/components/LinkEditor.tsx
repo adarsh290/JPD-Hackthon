@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import type { Link } from '@/hooks/useHubs';
-import { Clock, Smartphone, TrendingUp } from 'lucide-react';
+import { Clock, Smartphone, TrendingUp, Sparkles, Loader2, Lock } from 'lucide-react';
+import { fetchMetadata } from '@/lib/api';
 
 interface LinkEditorProps {
   hubId: string;
@@ -25,7 +26,10 @@ export function LinkEditor({ hubId, link, open, onClose, onSave }: LinkEditorPro
   const [timeEnd, setTimeEnd] = useState('');
   const [deviceType, setDeviceType] = useState<'all' | 'mobile' | 'desktop'>('all');
   const [autoSort, setAutoSort] = useState(false);
+  const [gateType, setGateType] = useState('none');
+  const [gateValue, setGateValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetchingMetadata, setFetchingMetadata] = useState(false);
 
   useEffect(() => {
     if (link) {
@@ -36,6 +40,8 @@ export function LinkEditor({ hubId, link, open, onClose, onSave }: LinkEditorPro
       setTimeEnd(link.time_end || '');
       setDeviceType(link.device_type || 'all');
       setAutoSort(link.auto_sort_enabled);
+      setGateType(link.gate_type || 'none');
+      setGateValue(link.gate_value || '');
     } else {
       setTitle('');
       setUrl('');
@@ -44,8 +50,28 @@ export function LinkEditor({ hubId, link, open, onClose, onSave }: LinkEditorPro
       setTimeEnd('');
       setDeviceType('all');
       setAutoSort(false);
+      setGateType('none');
+      setGateValue('');
     }
   }, [link, open]);
+
+  const handleFetchMetadata = async () => {
+    if (!url || !url.startsWith('http')) {
+      toast.error('Please enter a valid URL (starting with http:// or https://)');
+      return;
+    }
+
+    setFetchingMetadata(true);
+    try {
+      const data = await fetchMetadata(url);
+      if (data.title) setTitle(data.title);
+      toast.success('Metadata fetched!');
+    } catch (error: any) {
+      toast.error('Could not fetch metadata automatically');
+    } finally {
+      setFetchingMetadata(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +86,8 @@ export function LinkEditor({ hubId, link, open, onClose, onSave }: LinkEditorPro
         time_end: timeEnd || null,
         device_type: deviceType,
         auto_sort_enabled: autoSort,
+        gate_type: gateType,
+        gate_value: gateValue,
       });
       toast.success(link ? 'Link updated!' : 'Link created!');
       onClose();
@@ -72,7 +100,7 @@ export function LinkEditor({ hubId, link, open, onClose, onSave }: LinkEditorPro
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-display glow-text">
             {link ? '> EDIT_LINK' : '> CREATE_LINK'}
@@ -83,6 +111,34 @@ export function LinkEditor({ hubId, link, open, onClose, onSave }: LinkEditorPro
           {/* Basic Info */}
           <div className="space-y-4">
             <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">URL_</label>
+              <div className="flex gap-2">
+                <Input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  required
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleFetchMetadata}
+                  disabled={fetchingMetadata || !url}
+                  title="Auto-fill from URL"
+                  className="border-primary/50 hover:bg-primary/10"
+                >
+                  {fetchingMetadata ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 text-primary" />
+                  )}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
               <label className="text-sm text-muted-foreground">TITLE_</label>
               <Input
                 value={title}
@@ -91,21 +147,45 @@ export function LinkEditor({ hubId, link, open, onClose, onSave }: LinkEditorPro
                 required
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">URL_</label>
-              <Input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com"
-                required
-              />
-            </div>
             <div className="flex items-center justify-between">
               <label className="text-sm text-muted-foreground">ACTIVE_</label>
               <Switch checked={isActive} onCheckedChange={setIsActive} />
             </div>
           </div>
+
+          {/* Gate Rules */}
+          <Card variant="glass" className="border-primary/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                GATE_RULES
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Select value={gateType} onValueChange={setGateType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Gate Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Gate</SelectItem>
+                  <SelectItem value="password">Password Protected</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {gateType === 'password' && (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">SECRET_PASSWORD</label>
+                  <Input
+                    type="text"
+                    value={gateValue}
+                    onChange={(e) => setGateValue(e.target.value)}
+                    placeholder="Enter password"
+                    className="text-sm"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Conditional Rules */}
           <Card variant="glass" className="border-primary/20">
@@ -136,9 +216,6 @@ export function LinkEditor({ hubId, link, open, onClose, onSave }: LinkEditorPro
                   />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Leave empty to show at all times
-              </p>
             </CardContent>
           </Card>
 
